@@ -6,6 +6,8 @@
 #include "RooFitResult.h"
 #include "TF1.h"
 #include "TMatrixD.h"
+#include "TLatex.h"
+#include "TAxis.h"
 
 #include "../interface/ProfileMultiplePdfs.h"
 
@@ -42,7 +44,7 @@ void ProfileMultiplePdfs::plotNominalFits(RooAbsData *data, RooRealVar *var, int
   var->setVal(0.);
   for (map<string,pair<RooAbsPdf*,float> >::iterator m=listOfPdfs.begin(); m!=listOfPdfs.end(); m++) { 
     RooAbsPdf *pdf = m->second.first;
-    pdf->fitTo(*data);
+    pdf->fitTo(*data,Offset(false),Minimizer("Minuit2","minimze"));
     //RooFitResult *fitRes = pdf->fitTo(*data,Save(true));
     //fitRes->floatParsInit().Print("v");
     //fitRes->floatParsFinal().Print("v");
@@ -50,6 +52,7 @@ void ProfileMultiplePdfs::plotNominalFits(RooAbsData *data, RooRealVar *var, int
     RooPlot *plot = var->frame();
     data->plotOn(plot,Binning(binning));
     pdf->plotOn(plot);
+    pdf->paramOn(plot);
     plot->SetTitle(Form("%s_to_%s",pdf->GetName(),data->GetName()));
     plot->Draw();
     canv->Print(Form("%s_%s_to_%s.pdf",fname.c_str(),pdf->GetName(),data->GetName()));
@@ -116,7 +119,7 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
   map<string,double> mapOfValues;
   for (map<string,pair<RooAbsPdf*,float> >::iterator m=listOfPdfs.begin(); m!=listOfPdfs.end(); m++) { 
     RooAbsPdf *pdf = m->second.first;
-    RooFitResult *nom = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true));
+    RooFitResult *nom = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true),Offset(false),Minimizer("Minuit2","minimze"));
     RooArgSet *params = pdf->getParameters(*obs_var);
     saveValues(mapOfValues,params);
     if (2*nom->minNll()<globalMinNLL){
@@ -144,7 +147,7 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
       var->setConstant(false);
       var->setVal(v);
       var->setConstant(true);
-      RooFitResult *scan = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true));
+      RooFitResult *scan = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true),Offset(false),Minimizer("Minuit2","minimze"));
       thisNLL->SetPoint(p,v,TMath::Min(25.,(2*scan->minNll()-globalMinNLL)));
       addToResultMap(v,TMath::Min(25.,(2*scan->minNll()-globalMinNLL)),pdf);
       p++;
@@ -255,7 +258,7 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
   for (map<string,pair<RooAbsPdf*,float> >::iterator m=listOfPdfs.begin(); m!=listOfPdfs.end(); m++) { 
     RooAbsPdf *pdf = m->second.first;
     float penalty = m->second.second;
-    RooFitResult *nom = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true));
+    RooFitResult *nom = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true),Offset(false),Minimizer("Minuit2","minimze"));
     if (2*nom->minNll()+penalty<globalMinNLL){
       globalMinNLL = 2*nom->minNll()+penalty;
       bestFitVal = var->getVal();
@@ -276,7 +279,7 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
       var->setConstant(false);
       var->setVal(v);
       var->setConstant(true);
-      RooFitResult *scan = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true));
+      RooFitResult *scan = pdf->fitTo(*data,PrintLevel(-1),PrintEvalErrors(-1),Warnings(false),Save(true),Offset(false),Minimizer("Minuit2","minimze"));
       //RooFitResult *scan = pdf->fitTo(*data,Save(true));
       thisNLL->SetPoint(p,v,(2*scan->minNll()-globalMinNLL+penalty));
       addToResultMap(v,2*scan->minNll()-globalMinNLL+penalty,pdf);
@@ -323,15 +326,27 @@ void ProfileMultiplePdfs::plot(map<string,TGraph*> minNlls, string fname){
     envelope->SetLineWidth(2);
     envelope->SetLineColor(kRed);
     envelope->Draw("ALP");
+    TLatex *lat = new TLatex();
+    lat->SetTextSize(0.015);
+    lat->SetTextAngle(75.);
+
     for (map<string,TGraph*>::iterator it=minNlls.begin(); it!=minNlls.end(); it++){
       if (it->first!="envelope"){
+	TGraph *gr = getMinPoints(it->second);
+
         it->second->SetLineColor(kBlue+1);
         it->second->SetLineStyle(kDashed);
         it->second->Draw("LPsame");
+	double xx,yy;
+	if (gr) {
+		 gr->GetPoint(1,xx,yy);
+	         lat->DrawLatex(xx,yy,(it->first).c_str());
+	}
       }
     }
     canv->Print(Form("%s.pdf",fname.c_str()));
     delete canv;
+    delete lat;
   }
 
 }

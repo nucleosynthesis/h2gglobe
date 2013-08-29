@@ -32,7 +32,7 @@ using namespace RooFit;
 using namespace boost;
 namespace po = boost::program_options;
 
-void readDatFile(string datFileName, int cat, vector<pair<int,pair<string,string> > > &toysMap, vector<pair<int,pair<string,string> > > &fabianMap, vector<pair<int,pair<string,string> > > &paulMap){
+void readDatFile(string datFileName, int cat, vector<pair<int,pair<string,string> > > &toysMap, vector<pair<int,pair<string,string> > > &fabianMap, vector<pair<int,pair<string,string> > > &paulMap, std::string skipFamily=""){
  
   ifstream datfile;
   datfile.open(datFileName.c_str());
@@ -86,7 +86,13 @@ void readDatFile(string datFileName, int cat, vector<pair<int,pair<string,string
         fabianMap.push_back(pair<int,pair<string,string> >(order,make_pair(name,title)));
       }
       if (type=="paul") {
-        paulMap.push_back(pair<int,pair<string,string> >(order,make_pair(name,title)));
+	if (skipFamily != ""){
+	 if (title!=skipFamily){
+          paulMap.push_back(pair<int,pair<string,string> >(order,make_pair(name,title)));
+	 }
+	} else {
+          paulMap.push_back(pair<int,pair<string,string> >(order,make_pair(name,title)));
+	}
       }
     }
   }
@@ -107,6 +113,7 @@ int main(int argc, char* argv[]){
   string outFileName;
   string datFileName;
   string outDir;
+  string removeFamily;
   int cat;
   int ntoys;
   int jobn;
@@ -143,6 +150,7 @@ int main(int argc, char* argv[]){
     ("expectSignalMass", po::value<int>(&expectSignalMass)->default_value(125),                 "Inject signal at this mass")
     ("skipPlots",                                                                               "Skip full profile and toy plots")                        
     ("verbosity,v", po::value<int>(&verbosity)->default_value(0),                               "Verbosity level")
+    ("removeFamily", po::value<string>(&removeFamily)->default_value(""),                       "Remove a family from the envelope")
   ;    
   
   po::variables_map vm;
@@ -158,7 +166,7 @@ int main(int argc, char* argv[]){
   vector<pair<int,pair<string,string> > > toysMap;
   vector<pair<int,pair<string,string> > > fabianMap;
   vector<pair<int,pair<string,string> > > paulMap;
-  readDatFile(datFileName,cat,toysMap,fabianMap,paulMap);
+  readDatFile(datFileName,cat,toysMap,fabianMap,paulMap,removeFamily);
   
   cout << "Toy vector.." << endl;
   printOptionsMap(toysMap);
