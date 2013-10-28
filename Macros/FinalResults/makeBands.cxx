@@ -152,12 +152,13 @@ void readMassScan2D(TFile *bands, TString name, TString rootfile) {
 void makeBands() {
     gROOT->LoadMacro("$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/test/plotting/bandUtils.cxx+");
     
-    TFile *bands = new TFile("results/test.root","RECREATE");
-    readParamScan2D(bands, "cvcf_cutbased", "cutbased_data/cVcF125_x6/higgsCombinecVcF125_grid.MultiDimFit.mH125.root", "CV", "CF");
-    readParamScan2D(bands, "cvcf_mva2cat", "trainingJul23_124_Mjj100_data_2cat/cVcF125_x6/higgsCombinecVcF125_grid.MultiDimFit.mH125.root", "CV", "CF");
+    TFile *bands = new TFile("test.root","RECREATE");
+    readParamScan2D(bands, "legacy", "rvrf-grid.root", "RV", "RF");
+    //readParamScan2D(bands, "cvcf_cutbased", "cutbased_data/cVcF125_x6/higgsCombinecVcF125_grid.MultiDimFit.mH125.root", "CV", "CF");
+    //readParamScan2D(bands, "cvcf_mva2cat", "trainingJul23_124_Mjj100_data_2cat/cVcF125_x6/higgsCombinecVcF125_grid.MultiDimFit.mH125.root", "CV", "CF");
 
-    readParamScan2D(bands, "rvrf_cutbased", "cutbased_data/rVrF125_x6/higgsCombinerVrF125_grid.MultiDimFit.mH125.root", "RV", "RF"); 
-    readParamScan2D(bands, "rvrf_mva2cat", "trainingJul23_124_Mjj100_data_2cat/rVrF125_x6/higgsCombinerVrF125_grid.MultiDimFit.mH125.root", "RV", "RF");
+    //readParamScan2D(bands, "rvrf_cutbased", "cutbased_data/rVrF125_x6/higgsCombinerVrF125_grid.MultiDimFit.mH125.root", "RV", "RF"); 
+    //readParamScan2D(bands, "rvrf_mva2cat", "trainingJul23_124_Mjj100_data_2cat/rVrF125_x6/higgsCombinerVrF125_grid.MultiDimFit.mH125.root", "RV", "RF");
 
     bands->Close();
 }

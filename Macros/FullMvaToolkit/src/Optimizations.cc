@@ -6,9 +6,9 @@ using namespace std;
 Optimizations::Optimizations(TH2F *signalHisto, TH2F *backgroundHisto){
 
 	// set some defaults 
-	maxNumberOfBins = 8;
-        nNewBins = 100;
-	predefMin = 20;	
+	maxNumberOfBins = 12;
+        nNewBins = 250;
+	predefMin = 20; // Min number of expected bkg events	
 	
 	nFinalBins = 0;
 	delta = 0.00001;
@@ -41,7 +41,7 @@ void Optimizations::runOptimization(){
 	hsoverb->Divide(targetB2d);
 
 	double maximumSoverB = findMaximum(hsoverb);
-
+	std::cout << "Max S/B found = " << maximumSoverB << std::endl;
  	// Now we make it a Log(S/B) plot 
   	for (int k=1;k<=n2dbinsX;k++){
     		for (int l=1;l<=n2dbinsY;l++){
@@ -50,7 +50,7 @@ void Optimizations::runOptimization(){
   	}
 
 	SBscale =  1./(defx(maximumSoverB));
-	hsoverb->Scale(SBscale);
+	hsoverb->Scale();
 
 	FinalHist = (TH2F*) hsoverb->Clone();
 	FinalHist->SetName("Category_Map");
@@ -59,6 +59,9 @@ void Optimizations::runOptimization(){
 
 	targetS = new TH1F("targetS","",nNewBins,0,1);
  	targetB = new TH1F("targetB","",nNewBins,0,1);
+
+	// Can also make a signal efficiancy / bkg rejection plot 
+	roc_curve = new TGraph();
 
  	for (int bin = 1;bin<=nNewBins;bin++){
 
@@ -81,6 +84,10 @@ void Optimizations::runOptimization(){
       		  	binsb = SBscale*defx(ns/nb) - delta;
 		  }
 
+	  	  if ( binsb < 0 || binsb > nNewBins) {
+			std::cout << "Warning, there is a bin which is outside the maximum S/B, what to do with it?" << std::endl;
+			std::cout << binsb << " bin "<< k << ", " << l << std::endl;
+		  }
       		  if ( binsb < hval && binsb > lval ){
         		retVals+=ns;
         		retValb+=nb;
@@ -90,8 +97,17 @@ void Optimizations::runOptimization(){
 	
   	  targetS->SetBinContent(bin,retVals);
           targetB->SetBinContent(bin,retValb);
+	  
 
  	}
+ 	for (int bin = 1;bin<=nNewBins-1;bin++){
+	  roc_curve->SetPoint(bin-1
+			,1-targetB->Integral(bin,nNewBins)/targetB->Integral()
+			,targetS->Integral(bin,nNewBins)/targetS->Integral());
+	}
+	roc_curve->GetXaxis()->SetTitle("Background Rejection");
+	roc_curve->GetYaxis()->SetTitle("Signal Efficiency");
+	roc_curve->SetName("ROC");
 
 	// now find the optimial ranges
  
@@ -159,17 +175,21 @@ bool Optimizations::checkMinBkg(double bkg){
 
 }
 
-double Optimizations::calculateSigMulti(double *s1, double *b1, int nchannel){
+double Optimizations::calculateSigMulti(double *s1, double *b1, int nchannel,bool verb ){
 
   //    int nchannel=s1.size();
   double sterm=0;
   double logterms=0;
+  if (verb) std::cout << "This test " <<std::endl; 
   for (int i=0;i<nchannel;i++){
     if (!checkMinBkg(b1[i])) return 0.;
     logterms+=(s1[i]+b1[i])*TMath::Log((s1[i]+b1[i])/b1[i]);
     sterm+=s1[i];
+    if (verb) std::cout << s1[i]<<","<<b1[i] << " ";
   }
+  if (verb)  std::cout << std::endl;
   double sig =  1.4142*TMath::Sqrt(logterms - sterm);
+  //std::cout << "Significance @ " << nchannel << " bins = " << sig << std::endl; 
   return sig;
 }
 
@@ -324,8 +344,9 @@ std::vector<double> Optimizations::significanceOptimizedBinning(TGraph *optGr){
   if (g_step < 1) g_step=1;
 
   int Retry=0;
-
-  for (int N=1;N<maxNumberOfBins;N++){  // Refuse to go beyond 8 Bins, will take forever
+  std::cout << "Optimization max bins = " << maxNumberOfBins << std::endl;
+  for (int N=1;N<maxNumberOfBins;N++){  // Refuse to go beyond max Bins, will take forever
+    
     sweepmode=0;	// First perform Broad Scan with optimized step size (g_step)
     bool skipBroad = false;
     if ( nNewBins < (N-1+2+Retry) ) {std::cout << "Forced to perform Fine scan since all the Retries failed to find a nice minimum :("<<std::endl; skipBroad=true;}
@@ -353,15 +374,36 @@ std::vector<double> Optimizations::significanceOptimizedBinning(TGraph *optGr){
     int resetpoint = (2>frozen_counters[0]-g_step) ? 2 : frozen_counters[0]-g_step;
     counters[0]=resetpoint;
 
+    std::cout << ".... Running finer scan "	<<std::endl;
     maxSigScan(&maximumSignificance,frozen_counters,chosen_counters,N,counters,N-1);
 
     diff = ( std::clock() - start ) / (double)CLOCKS_PER_SEC;
     std::cout << Form("Finished, time taken = %3.5f",diff)<<std::endl;
+    if (N+1 == maxNumberOfBins) std::cout << "Maximum number of bins reached before significance reached improvement tolerance! " <<std::endl;
     std::cout << "N Bins, Max Significance -> " << N+1 << " "<<maximumSignificance << std::endl;
-    /*std::cout << "Boundaries at: [ ";
-    for (int cc=0;cc<N; cc++) std::cout << hsnew->GetBinLowEdge(chosen_counters[cc]) << " , ";
+     
+    std::cout << "Boundaries currently at: [ ";
+    for (int cc=0;cc<N; cc++) {
+	std::cout << chosen_counters[cc] << ",";
+    }
     std::cout << " ]" << std::endl;
-    */
+    std::cout << "Integrals are: [ ";
+    for (int j=0;j<=N-1;j++){
+          if (j==0){	    
+          getIntegralBetweenRanges(&signalVector1[j],&backgroundVector1[j],1,chosen_counters[j]-1);
+          } else {
+          getIntegralBetweenRanges(&signalVector1[j],&backgroundVector1[j],chosen_counters[j-1],chosen_counters[j]-1);
+          }
+    }
+    getIntegralBetweenRanges(&signalVector1[N],&backgroundVector1[N],chosen_counters[N-1],nNewBins);
+    for (int j=0;j<=N;j++){
+	std::cout << signalVector1[j] << ","<< backgroundVector1[j]<< " ";
+    }	
+    std::cout << " ]" << std::endl;
+    //backgroundVector1[N]=(hb->Integral(counters[N-1],nBins));
+    double calcsig = calculateSigMulti(signalVector1,backgroundVector1,N+1,true);
+    std::cout << "So the significance is " << calcsig <<std::endl;
+    
 
     if (maximumSignificance < highestMaxSignificance){
          

@@ -79,6 +79,7 @@ def pvalPlot(allVals):
     graph = r.TGraph()
     for j in range(len(values)):
       graph.SetPoint(j,values[j][0],values[j][1])
+      print "Add point ", values[j][0], values[j][1]
     
     graph.SetLineColor(int(options.colors[k]))
     graph.SetLineStyle(int(options.styles[k]))
@@ -115,7 +116,7 @@ def pvalPlot(allVals):
     lines[i].SetLineColor(r.kRed)
     labels.append(r.TLatex(110 + 2, y * 1.1, "%d #sigma" % (i+1)))
     labels[i].SetTextAlign(11);
-    if y<=mg.GetYaxis().GetXmax() and y>=mg.GetYaxis().GetXmin():
+    if y<=dummyHist.GetMaximum() and y>=dummyHist.GetMinimum():
       lines[i].Draw('SAME')
       labels[i].Draw('SAME')
 
