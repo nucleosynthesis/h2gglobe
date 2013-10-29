@@ -7,11 +7,11 @@ Optimizations::Optimizations(TH2F *signalHisto, TH2F *backgroundHisto){
 
 	// set some defaults 
 	maxNumberOfBins = 12;
-        nNewBins = 250;
+        nNewBins = 100;
 	predefMin = 20; // Min number of expected bkg events	
 	
 	nFinalBins = 0;
-	delta = 0.00001;
+	delta = 0.000001;
 	threshold = 0.001; // % imporovement on significance for extra bin
 	
 	targetS2d = (TH2F*)signalHisto->Clone();
@@ -42,15 +42,25 @@ void Optimizations::runOptimization(){
 
 	double maximumSoverB = findMaximum(hsoverb);
 	std::cout << "Max S/B found = " << maximumSoverB << std::endl;
- 	// Now we make it a Log(S/B) plot 
+	double RMS = 0.;
+	double mean = findRMS(hsoverb,&RMS);
+	std::cout << "Median = " << mean << ", RMS = " << RMS  << std::endl;
+	double altmax = mean+5*RMS;
+        std::cout << "mean+5*sigma = " << altmax << std::endl;	
+	maximumSoverB = maximumSoverB < altmax ? maximumSoverB : altmax;
+	std::cout << "Setting max of hist to " << maximumSoverB << std::endl;
+
+ 	// Now we make it a Log2(S/B) plot 
+	SBscale =  1./(maximumSoverB);
+	//SBscale = 1.;
+	hsoverb->Scale(SBscale);
+
   	for (int k=1;k<=n2dbinsX;k++){
     		for (int l=1;l<=n2dbinsY;l++){
 		  hsoverb->SetBinContent(k,l,defx(hsoverb->GetBinContent(k,l)));
     		}
   	}
 
-	SBscale =  1./(defx(maximumSoverB));
-	hsoverb->Scale();
 
 	FinalHist = (TH2F*) hsoverb->Clone();
 	FinalHist->SetName("Category_Map");
@@ -77,18 +87,17 @@ void Optimizations::runOptimization(){
       		  double ns = targetS2d->GetBinContent(k,l);
       		  double nb = targetB2d->GetBinContent(k,l);
 		  double binsb;
-		  if (nb < 0.0001){
-      		  	binsb = 1 - delta;
+		  if (nb < delta){
+      		  	binsb = 1 + delta;
 		  } else {
-
-      		  	binsb = SBscale*defx(ns/nb) - delta;
+      		  	binsb = defx(SBscale*ns/nb) + delta;
 		  }
 
 	  	  if ( binsb < 0 || binsb > nNewBins) {
 			std::cout << "Warning, there is a bin which is outside the maximum S/B, what to do with it?" << std::endl;
 			std::cout << binsb << " bin "<< k << ", " << l << std::endl;
 		  }
-      		  if ( binsb < hval && binsb > lval ){
+      		  if ( binsb < hval && binsb >= lval ){
         		retVals+=ns;
         		retValb+=nb;
       		  }
@@ -108,6 +117,8 @@ void Optimizations::runOptimization(){
 	roc_curve->GetXaxis()->SetTitle("Background Rejection");
 	roc_curve->GetYaxis()->SetTitle("Signal Efficiency");
 	roc_curve->SetName("ROC");
+	roc_curve->SetMarkerSize(0.6);
+	roc_curve->SetMarkerStyle(20);
 
 	// now find the optimial ranges
  
@@ -127,11 +138,11 @@ void Optimizations::runOptimization(){
       		  double ns = targetS2d->GetBinContent(k,l);
       		  double nb = targetB2d->GetBinContent(k,l);
 		  double binsb;
-		  if (nb < 0.0001){
-      		  	binsb = 1 - delta; // All the S/B 
+		  if (nb < delta){
+      		  	binsb = 1 + delta; // All the S/B 
 		  } else {
 
-      		  	binsb = SBscale*defx(ns/nb) - delta;
+      		  	binsb = defx(SBscale*ns/nb) + delta;
 		  }
 
                 if ( binsb > lval ){ // Note will never be > 1
@@ -161,9 +172,34 @@ double Optimizations::findMaximum(TH2F *hist){
   }
  return max;
 }
+// find the Median of a 2D hist entries
+double Optimizations::findRMS(TH2F *hist, double *RMS){
+
+  double sum = 0.;
+  double var = 0.;
+  std::vector<double> vals;
+  for (int k=1;k<=n2dbinsX;k++){
+    for (int l=1;l<=n2dbinsY;l++){
+
+	double c = hist->GetBinContent(k,l);
+        sum += c;
+	vals.push_back(c);
+	var += (c*c);
+    }
+ }
+ std::sort(vals.begin(),vals.end());
+ double median = vals[int(vals.size()/2)];
+ double c68u   = vals[int(0.84*vals.size())]-median;
+ sum = sum/(n2dbinsX*n2dbinsY);
+ var = TMath::Sqrt((var/(n2dbinsX*n2dbinsY)) - median*median);
+ *RMS = c68u;
+ return median;
+}
 
 void Optimizations::getIntegralBetweenRanges(double *s,double *b,int l,     int h){
- 
+
+   // Always include the overflows! 
+   if (h==targetS->GetNbinsX()) h += 1;
    *s = targetS->Integral(l,h);
    *b = targetB->Integral(l,h);
  
@@ -183,6 +219,7 @@ double Optimizations::calculateSigMulti(double *s1, double *b1, int nchannel,boo
   if (verb) std::cout << "This test " <<std::endl; 
   for (int i=0;i<nchannel;i++){
     if (!checkMinBkg(b1[i])) return 0.;
+    if (!s1[i]>0) return 0.;
     logterms+=(s1[i]+b1[i])*TMath::Log((s1[i]+b1[i])/b1[i]);
     sterm+=s1[i];
     if (verb) std::cout << s1[i]<<","<<b1[i] << " ";
