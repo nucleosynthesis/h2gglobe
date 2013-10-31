@@ -4,19 +4,19 @@ bdtname=BDTgradMIT
 
 weightsFile=SidebandTrainingOut.root
 
-IntLumi=19620
+IntLumi=19715
 
 # Testing hypothesis
 mHMinimum=110.0
 mHMaximum=150.0
-mHStep=0.5
+mHStep=1
 
 # Options for the mass spectrum range
 
 massMin=100
 massMax=180
 nDataBins=160
-diphotonBdtCut=-0.05
+diphotonBdtCut=-0.6
 
 # Options for the sidebands
 signalRegionWidth=0.02

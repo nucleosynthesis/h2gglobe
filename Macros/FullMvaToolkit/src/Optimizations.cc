@@ -90,7 +90,7 @@ void Optimizations::runOptimization(){
 		  if (nb < delta){
       		  	binsb = 1 + delta;
 		  } else {
-      		  	binsb = defx(SBscale*ns/nb) + delta;
+      		  	binsb = defx(SBscale*ns/nb) - delta;
 		  }
 
 	  	  if ( binsb < 0 || binsb > nNewBins) {
@@ -131,20 +131,19 @@ void Optimizations::runOptimization(){
 
         // Loop Through the bins and set the values of the new histogram (remember, h2 already scaled) 
         double lval = *it;
-
         for (int k=1;k<=n2dbinsX;k++){
           for (int l=1;l<=n2dbinsY;l++){
 		
       		  double ns = targetS2d->GetBinContent(k,l);
       		  double nb = targetB2d->GetBinContent(k,l);
 		  double binsb;
-		  if (nb < delta){
-      		  	binsb = 1 + delta; // All the S/B 
+		  if (nb < delta || lval > 1-delta ){
+      		  	binsb = 1 - delta; // All the S/B 
 		  } else {
 
-      		  	binsb = defx(SBscale*ns/nb) + delta;
+      		  	binsb = defx(SBscale*ns/nb) - delta;
 		  }
-
+		
                 if ( binsb > lval ){ // Note will never be > 1
                         FinalHist->SetBinContent(k,l,((double)rangecounter/nFinalBins)-(0.5/nFinalBins));  
                 }

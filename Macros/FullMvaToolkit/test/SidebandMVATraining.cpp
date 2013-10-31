@@ -40,7 +40,7 @@ bool skipTesting_=false;
 bool skipEvaluation_=false;
 bool isCutBased_=false;
 int trainingMass_=124;
-float bdtCut_=-0.5;
+float bdtCut_=-0.6;
 float mggMin_=100.;
 float mggMax_=180.;
 
@@ -315,19 +315,26 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
  int nFinalBins = optimizer->getFinalNumberOfBins();
 
  // Step 3, save output and print ranges also S/B
- TH1F *binedgesMap = new TH1F("Bin_Edges","Bin Boundaries",nFinalBins,-1,1);
+ double *boundaries = new double[nFinalBins+1] ;
+ boundaries[0] = -1.;
+ for (int b = 1 ; b < nFinalBins ; b++){
+  boundaries[b] = (double)b/nFinalBins;
+ }
+ boundaries[nFinalBins]=1.;
+
+ TH1F *binedgesMap = new TH1F("Bin_Edges","Bin Boundaries",nFinalBins,boundaries);
  for (int b = 1 ; b <= nFinalBins ; b++){
 	binedgesMap->SetBinContent(b,b);
  }
+ delete boundaries;
  
- 
- std::cout << "Final Number Of Bins -- (Copy these into .dat file)" << nFinalBins << std::endl;
- std::cout << "-1";
- for (int b = 1 ; b < nFinalBins ; b++){
+ std::cout << "Final Number Of Bins -- " << nFinalBins << std::endl;
+ //std::cout << "-1";
+ //for (int b = 1 ; b < nFinalBins ; b++){
 	
-	std::cout << "," << (double)b/nFinalBins;
- }
- std::cout << ",1" <<std::endl;
+//	std::cout << "," << (double)b/nFinalBins;
+// }
+// std::cout << ",1" <<std::endl;
 	
  outFile_->cd();
  categoryMap->Write();	
