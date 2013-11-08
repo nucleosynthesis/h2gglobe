@@ -489,8 +489,8 @@ int main(int argc, char* argv[]){
 
     if (saveMultiPdf){
 	  // Put selectedModels into a MultiPdf
-	  RooCategory catIndex(Form("pdfindex_%d",cat),"c");
 	  std::string ext = is2011 ? "7TeV" : "8TeV";
+	  RooCategory catIndex(Form("pdfindex_%d_%s",cat,ext.c_str()),"c");
 	  RooMultiPdf *pdf = new RooMultiPdf(Form("CMS_hgg_cat%d_%s_bkgshape",cat,ext.c_str()),"all pdfs",catIndex,storedPdfs);
 	
 	  RooRealVar nBackground(Form("CMS_hgg_cat%d_%s_bkgshape_norm",cat,ext.c_str()),"nbkg",data->sumEntries(),0,10E8);
