@@ -271,9 +271,9 @@ void FMTTree::setBranchVariables(TTree *tree){
 
 }
 
-float FMTTree::getCategoryMapVal(float dmom, float bdt){
+float FMTTree::getCategoryMapVal(float bdt, float dmom){
 
-	int bin = categoryMap->FindBin(dmom,bdt);
+	int bin = categoryMap->FindBin(bdt,dmom);
 	return categoryMap->GetBinContent(bin);
 }
 
@@ -372,9 +372,10 @@ void FMTTree::FillSystHist(string proc, double mh){
 				weight = weightSyst_[s].second;
 			}
       if (cat<0) return;
-			if (mass>=cutLow && mass<=cutHigh ) 
+			if (mass>=cutLow && mass<=cutHigh ) {
 			  	if (cat==0 && bdtoutput_>diphotonBdtCut_){
-				th1fs_[Form("th1f_sig_BDT_grad_%s_%5.1f_cat%d_%s%s01_sigma",proc.c_str(),mh,cat,systematics_[s].c_str(),shift[t].c_str())]->Fill(val,weight);}
+				  th1fs_[Form("th1f_sig_BDT_grad_%s_%5.1f_cat%d_%s%s01_sigma",proc.c_str(),mh,cat,systematics_[s].c_str(),shift[t].c_str())]->Fill(val,weight);
+				}
 			}
 		}
 	}

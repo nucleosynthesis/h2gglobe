@@ -26,21 +26,21 @@ g_expdijet		= 0.00495 # means nothing now
 # Some "Global" Variables, for exclusive tags
 # Map out the EXCL bins -- (start from 1), these are for systematics
 Bins_vbf  = [1,2,3]
-Bins_vh   = [4,5,6,7,8,9,10]
+Bins_vh   = [4,5,6,7,8,9]
 nBins_vbf = len(Bins_vbf)
 nBins_vh  = len(Bins_vh)
 
 # Now the bins which are for the plots, assume 1 is the first non-incl bin 
 pl_VBF_bins = [1,2,3]
-pl_VH_bins  = [4,5,6,9,10]
+pl_VH_bins  = [4,5,6]
 pl_ttH_bins = [7,8,9]
 
 
 # Now decide which bins (starting from lowest vh bin) 
 # are the muon, electron and met tags
-Muon_tags 	= [4]
-Elec_tags       = [5]
-MET_tags 	= [7,8]
+Muon_tags 	= [4,5]
+Elec_tags       = [4,5]
+MET_tags 	= [6]
 
 # PLOT OPS ----------------
 sigscale   = 1.
@@ -76,7 +76,7 @@ UEPS_VH  = 0.260
 UEPS_ttH = 0.260
 
 JEC_ggH = 0.110
-JEC_qqH = 0.034
+JEC_qqH = 0.035
 JEC_VH  = 0.110
 JEC_ttH = 0.110
 
@@ -823,8 +823,9 @@ genMasses     = [110,115,120,125,130,135,140,145,150]
 
 # CUT-BASED at 19.6fb has 141981 events - [1.00957,1.00916,1.00903,1.01011,1.01236,1.01224,1.01257,1.01251,1.01334]
 
-scalingErrors = [1.00412,1.00380,1.00377,1.00399,1.00437,1.00442,1.00443,1.00472,1.00503]
-
+#scalingErrors = [1.00412,1.00380,1.00377,1.00399,1.00437,1.00442,1.00443,1.00472,1.00503]
+#Legacy 8TeV Freeze numbers
+scalingErrors =  [1.00486, 1.00468, 1.00464, 1.00489, 1.00535, 1.00545, 1.00550, 1.00579, 1.00609]
 
 #evalMasses    = numpy.arange(110,150.5,0.5)
 evalMasses    = numpy.arange(options.mhLow,options.mhHigh+options.mhStep,options.mhStep)

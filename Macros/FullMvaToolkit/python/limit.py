@@ -39,14 +39,14 @@ for m in masses:
   print " running mass", m
   print " -------------------------------"
   if not options.noas: 
-	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M Asymptotic  -m %3.1f --rAbsAcc 0.00001 --rRelAcc 0.00001 --minosAlgo=stepping --noFitAsimov %s "%(options.runDirectory,m,m,ext))
+	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M Asymptotic  -m %3.1f  %s "%(options.runDirectory,m,m,ext))
   if not options.nopl: 
 	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M ProfileLikelihood --signif --pvalue -m %3.1f %s" %(options.runDirectory,m,m,ext))
   if not options.nomf: 
 	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M MaxLikelihoodFit --rMin -10 --rMax 10  -m %3.1f %s" %(options.runDirectory,m,m,ext))
   for M in Methods: os.system("mv -v higgsCombineTest.%s.* %s/%s"%(M,options.runDirectory,M))
   if not options.noexppl: 
-	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M ProfileLikelihood --signif --pvalue -m %3.1f -t -1 --expectSignal 1 %s --toysNoSystematics --minimizerTolerance 0.0001" %(options.runDirectory,m,m,ext))
+	os.system("combine %s/mva-datacard_grad_%3.1f.txt -M ProfileLikelihood --signif --pvalue -m %3.1f -t -1 --expectSignal 1 %s " %(options.runDirectory,m,m,ext))
   	os.system("mv -v higgsCombineTest.ProfileLikelihood.* %s/ExpProfileLikelihood"%options.runDirectory)
 
 print "Finished Limits"
