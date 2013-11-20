@@ -32,8 +32,8 @@ nBins_vh  = len(Bins_vh)
 
 # Now the bins which are for the plots, assume 1 is the first non-incl bin 
 pl_VBF_bins = [1,2,3]
-pl_VH_bins  = [4,5,6]
-pl_ttH_bins = [7,8,9]
+pl_VH_bins  = [4,5,6,9]
+pl_ttH_bins = [7,8]
 
 
 # Now decide which bins (starting from lowest vh bin) 
