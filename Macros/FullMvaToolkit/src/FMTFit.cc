@@ -240,7 +240,10 @@ void FMTFit::Plot(double mass){
    
     cout << "Plotting fit...." << endl;
     RooPlot *frame = mass_var->frame(Title(Form("Mass fit for %3.1f",mass)));
+    frame->SetTitle("");
     frame->GetXaxis()->SetTitle("m_{#gamma#gamma} (GeV)");
+    frame->GetYaxis()->SetTitle("Events / (0.5 GeV)");
+    frame->GetYaxis()->SetTitleOffset(1.2);
     mass_var->setRange("unblindReg_1",getmassMin(),110);
     mass_var->setRange("unblindReg_2",150,getmassMax());
 		if (blind_) {
@@ -258,30 +261,30 @@ void FMTFit::Plot(double mass){
 		TLine l1, l2;
     l1.SetLineColor(kRed);
     l1.SetLineWidth(2);
-    l2.SetLineColor(kBlue-2);
+    l2.SetLineColor(kBlue);
     l2.SetLineWidth(2);
-    l2.SetLineStyle(9);
+    l2.SetLineStyle(1);
     TBox b1, b2;
     b1.SetFillColor(kRed-9);
     b2.SetFillColor(kBlue-9);
-    b1.SetFillStyle(3003);
-    b2.SetFillStyle(3003);
+    b1.SetFillStyle(1001);
+    b2.SetFillStyle(1001);
     b1.IsTransparent();
     b2.IsTransparent();
 		double sidebL = mass*(1-getsignalRegionWidth());
 		double sidebH = mass*(1+getsignalRegionWidth());
+    b1.DrawBox(sidebL,frame->GetMinimum(),sidebH,frame->GetMaximum());
     l1.DrawLine(sidebL,frame->GetMinimum(),sidebL,frame->GetMaximum());
     l1.DrawLine(sidebH,frame->GetMinimum(),sidebH,frame->GetMaximum());
-    b1.DrawBox(sidebL,frame->GetMinimum(),sidebH,frame->GetMaximum());
     vector<double> lowEdges = getLowerSidebandEdges(mass);
     vector<double> highEdges = getUpperSidebandEdges(mass);
     for (unsigned int i=0; i<lowEdges.size(); i++) {
-      l2.DrawLine(lowEdges[i],frame->GetMinimum(),lowEdges[i],frame->GetMaximum());
       if (i>0) b2.DrawBox(lowEdges[i-1],frame->GetMinimum(),lowEdges[i],frame->GetMaximum());
+      l2.DrawLine(lowEdges[i],frame->GetMinimum(),lowEdges[i],frame->GetMaximum());
     }
     for (unsigned int i=0; i<highEdges.size(); i++) {
-      l2.DrawLine(highEdges[i],frame->GetMinimum(),highEdges[i],frame->GetMaximum()); 
       if (i>0) b2.DrawBox(highEdges[i-1],frame->GetMinimum(),highEdges[i],frame->GetMaximum());
+      l2.DrawLine(highEdges[i],frame->GetMinimum(),highEdges[i],frame->GetMaximum()); 
     }
 		frame->Draw("same");
 		TLatex *text = new TLatex();

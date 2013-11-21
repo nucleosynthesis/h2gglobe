@@ -11,7 +11,7 @@ Optimizations::Optimizations(TH2F *signalHisto, TH2F *backgroundHisto){
 	predefMin = 10; // Min number of expected bkg events	
 	
 	nFinalBins = 0;
-	delta = 0.01;
+	delta = 0.001;
 	threshold = 0.0025; // % imporovement on significance for extra bin
 	
 	targetS2d = (TH2F*)signalHisto->Clone();
@@ -93,10 +93,10 @@ void Optimizations::runOptimization(){
 		   if (ns < delta){
       		  	binsb = 0;
 		  }*/
-		  //else {
-      		  	binsb = defx(SBscale*ns/nb) + delta;
+		  else {
+      		  	binsb = defx(SBscale*ns/nb) ;
 			if (defx(SBscale*ns/nb) >= 1)  binsb = 1.-delta;
-//		  }
+		  }
 		  
       		  if ( binsb < hval && binsb >= lval ){
         		retVals+=ns;
@@ -142,7 +142,8 @@ void Optimizations::runOptimization(){
       		  	binsb = 1 - delta; // All the S/B 
 		  } else {
 
-      		  	binsb = defx(SBscale*ns/nb) - delta;
+      		  	binsb = defx(SBscale*ns/nb) ;
+			if (defx(SBscale*ns/nb) >= 1)  binsb = 1.-delta;
 		  }
 		
                 if ( binsb > lval ){ // Note will never be > 1

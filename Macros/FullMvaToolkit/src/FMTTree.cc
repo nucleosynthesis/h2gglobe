@@ -195,10 +195,11 @@ map<string,TTree*> FMTTree::getSignalTrees(string option){
   map<string,TTree*> result;
   vector<int> mcMasses = getMCMasses();
   vector<string> processes = getProcesses();
+  std::string ext = is2011_ ? "7TeV" : "8TeV";
   for (vector<int>::iterator mSig=mcMasses.begin(); mSig!=mcMasses.end(); mSig++){
     for (vector<string>::iterator proc=processes.begin(); proc!=processes.end(); proc++){
-      if (option=="all") addTreeToMap(result,Form("%s/%s_m%d_8TeV",dirname_.c_str(),proc->c_str(),*mSig));
-      else if (option==*proc) addTreeToMap(result,Form("%s/%s_m%d_8TeV",dirname_.c_str(),proc->c_str(),*mSig));
+      if (option=="all") addTreeToMap(result,Form("%s/%s_m%d_%s",dirname_.c_str(),proc->c_str(),*mSig,ext.c_str()));
+      else if (option==*proc) addTreeToMap(result,Form("%s/%s_m%d_%s",dirname_.c_str(),proc->c_str(),*mSig,ext.c_str()));
     }
   }
 	//addTreeToMap(result,"full_mva_trees/ggh_m124_pu2012");
@@ -214,18 +215,15 @@ map<string,TTree*> FMTTree::getDataTrees(){
 map<string,TTree*> FMTTree::getBackgroundTrees(){
 
   map<string,TTree*> result;
-  // fake-fake
-	//addTreeToMap(result,Form("%s/qcd_30_8TeV_ff",dirname_.c_str()));//,"bkg");
-	//addTreeToMap(result,Form("%s/qcd_40_8TeV_ff",dirname_.c_str()));//,"bkg");
-	// prompt-fake
-  //addTreeToMap(result,Form("%s/qcd_30_8TeV_pf",dirname_.c_str()));//,"bkg");
-	//addTreeToMap(result,Form("%s/qcd_40_8TeV_pf",dirname_.c_str()));//,"bkg");
+  if ( is2011_) {
+	addTreeToMap(result,Form("%s/gjet_20_7TeV_pf",dirname_.c_str()));//,"bkg");
+  	addTreeToMap(result,Form("%s/diphojet_7TeV",dirname_.c_str()));//,"bkg");
+  } else {
 	addTreeToMap(result,Form("%s/gjet_20_8TeV_pf",dirname_.c_str()));//,"bkg");
 	addTreeToMap(result,Form("%s/gjet_40_8TeV_pf",dirname_.c_str()));//,"bkg");
-	// prompt-prompt
-  addTreeToMap(result,Form("%s/diphojet_sherpa_8TeV",dirname_.c_str()));//,"bkg");
-//	addTreeToMap(result,Form("%s/dipho_Box_25_8TeV",dirname_.c_str()));//,"bkg");
-//	addTreeToMap(result,Form("%s/dipho_Box_250_8TeV",dirname_.c_str()));//,"bkg");
+  	addTreeToMap(result,Form("%s/diphojet_sherpa_8TeV",dirname_.c_str()));//,"bkg");
+  }
+  
   return result;
 }
 
