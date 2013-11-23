@@ -629,6 +629,7 @@ int main(int argc, char* argv[]){
   fprintf(resFile,"Truth Model & d.o.f & $\\Delta NLL_{N+1}$ & $p(\\chi^{2}>\\chi^{2}_{(N\\rightarrow N+1)})$ \\\\\n");
   fprintf(resFile,"\\hline\n");
 
+  std::string ext = is2011 ? "7TeV" : "8TeV";
   for (int cat=startingCategory; cat<ncats; cat++){
     
     map<string,int> choices;
@@ -662,7 +663,7 @@ int main(int argc, char* argv[]){
       std::vector<int> pdforders;
 
       while (prob<0.05){
-        RooAbsPdf *bkgPdf = getPdf(pdfsModel,*funcType,order);
+        RooAbsPdf *bkgPdf = getPdf(pdfsModel,*funcType,order,Form("ftest_pdf_%d_%s",cat,ext.c_str()));
         if (!bkgPdf){
           // assume this order is not allowed
           order++;
@@ -715,7 +716,7 @@ int main(int argc, char* argv[]){
 	std::cout << "Upper end Threshold for highest order function " << upperEnvThreshold <<std::endl;
 
         while (prob<upperEnvThreshold){
-         RooAbsPdf *bkgPdf = getPdf(pdfsModel,*funcType,order,Form("pdf_%d",cat));
+         RooAbsPdf *bkgPdf = getPdf(pdfsModel,*funcType,order,Form("env_pdf_%d_%s",cat,ext.c_str()));
           if (!bkgPdf ){
           // assume this order is not allowed
           order++;
@@ -779,7 +780,6 @@ int main(int argc, char* argv[]){
 
 
 	  // Put selectedModels into a MultiPdf
-	  std::string ext = is2011 ? "7TeV" : "8TeV";
 	  RooCategory catIndex(Form("pdfindex_%d_%s",cat,ext.c_str()),"c");
 	  RooMultiPdf *pdf = new RooMultiPdf(Form("CMS_hgg_cat%d_%s_bkgshape",cat,ext.c_str()),"all pdfs",catIndex,storedPdfs);
 	  RooRealVar nBackground(Form("CMS_hgg_cat%d_%s_bkgshape_norm",cat,ext.c_str()),"nbkg",data->sumEntries(),0,10E8);
