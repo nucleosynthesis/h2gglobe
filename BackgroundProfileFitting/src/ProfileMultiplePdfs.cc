@@ -122,6 +122,7 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
     if (2*nom->minNll()<globalMinNLL){
       globalMinNLL = 2*nom->minNll();
       bestFitVal = var->getVal();
+      bestFitErr = var->getError();
       bestFitPdf = pdf;
     }
   }
@@ -130,6 +131,13 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
   cout << "\tmu  = " << bestFitVal << endl;
   cout << "\tpdf = " << bestFitPdf->GetName() << endl;
 
+  low  = bestFitVal-2.5*bestFitErr;
+  high = bestFitVal+2.5*bestFitErr;
+  std::vector<float> scanValues;
+  for (float v=low; v<(high+stepsize); v+=stepsize){
+    scanValues.push_back(v);	
+    if (v<bestFitVal && v+stepsize>bestFitVal) scanValues.push_back((float)bestFitVal);
+  }
   // now perform the scan
   cout << "Scanning...." << endl;
   for (map<string,pair<RooAbsPdf*,float> >::iterator m=listOfPdfs.begin(); m!=listOfPdfs.end(); m++) { 
@@ -137,7 +145,8 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
     cout << "\t pdf " << distance(listOfPdfs.begin(),m) << "/" << listOfPdfs.size() << " (" << pdf->GetName() << ")" << endl;
     TGraph *thisNLL = new TGraph();
     int p=0;
-    for (float v=low; v<(high+stepsize); v+=stepsize){
+    for (std::vector<float>::iterator vit = scanValues.begin();vit!=scanValues.end();vit++){
+      float v = *vit;
       cout << Form("\t%5.1f%%\r",100.*(v-low)/(high-low)) << flush;
       RooArgSet *params = (RooArgSet*)pdf->getParameters(*var);
       setValues(mapOfValues,params);
@@ -259,6 +268,7 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
     if (2*nom->minNll()+penalty<globalMinNLL){
       globalMinNLL = 2*nom->minNll()+penalty;
       bestFitVal = var->getVal();
+      bestFitErr = var->getError();
       bestFitPdf = pdf;
     }
   }
@@ -266,13 +276,22 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
   cout << "\tnll = " << globalMinNLL << endl;
   cout << "\tmu  = " << bestFitVal << endl;
   cout << "\tpdf = " << bestFitPdf->GetName() << endl;
+
+  low  = bestFitVal-2.5*bestFitErr;
+  high = bestFitVal+2.5*bestFitErr;
+  std::vector<float> scanValues;
+  for (float v=low; v<(high+stepsize); v+=stepsize){
+    scanValues.push_back(v);
+    if (v<bestFitVal && v+stepsize>bestFitVal) scanValues.push_back((float)bestFitVal);
+  }
   // now perform the scan
   for (map<string,pair<RooAbsPdf*,float> >::iterator m=listOfPdfs.begin(); m!=listOfPdfs.end(); m++) { 
     RooAbsPdf *pdf = m->second.first;
     float penalty = m->second.second;
     TGraph *thisNLL = new TGraph();
     int p=0;
-    for (float v=low; v<high; v+=stepsize){
+    for (std::vector<float>::iterator vit = scanValues.begin();vit!=scanValues.end();vit++){
+      float v = *vit;
       var->setConstant(false);
       var->setVal(v);
       var->setConstant(true);
@@ -289,7 +308,8 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
     minNlls.insert(pair<string,TGraph*>(thisNLL->GetName(),thisNLL));
   }
   int p=0;
-  for (float v=low; v<high; v+=stepsize){
+  for (std::vector<float>::iterator vit = scanValues.begin();vit!=scanValues.end();vit++){
+    float v = *vit;
     float minPoint=1.e8;
     for (map<string,TGraph*>::iterator mIt=minNlls.begin(); mIt!=minNlls.end(); mIt++){
       if (mIt->second->Eval(v)<minPoint){
