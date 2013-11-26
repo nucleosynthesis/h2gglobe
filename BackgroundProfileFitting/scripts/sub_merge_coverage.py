@@ -50,7 +50,7 @@ def writeTmpDat(dat):
  cats = []
  for line in fi.readlines():
   if line.startswith('#') or line=='' or line =='\n': continue
-  if "cat=" in line:
+  if "cats=" in line:
     vlist = (line.split("="))[1]
     cats = [int(v) for v in vlist.split(",")] 
     continue

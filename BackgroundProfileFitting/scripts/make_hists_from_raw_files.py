@@ -143,8 +143,12 @@ def makeHists(cat=0,meanB=50,meanL=-4.,meanH=4.,errB=50,errL=0.5,errH=1.5,pullB=
       err_low = muInfo.at(1)
       err_high = muInfo.at(2)
       sym_err = (err_low+err_high)/2.
-      pull = profiler.getPull(graph,options.expectSignal)
 
+      if muVal<options.expectSignal: pull = (muVal-options.expectSignal)/err_high	
+      else: pull = (muVal-options.expectSignal)/err_low
+
+      #pull = profiler.getPull(graph,options.expectSignal) ## need to fit best fit and truth for this
+	
       #print truth, mytype, '%4.2f  %4.2f  %4.2f  %4.2f'%(muVal,err_low,err_high,sym_err)
       
       if muVal>=999. or sym_err>=999. or sym_err<0.001: continue
