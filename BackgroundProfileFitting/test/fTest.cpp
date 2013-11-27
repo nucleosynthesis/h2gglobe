@@ -64,6 +64,29 @@ RooAbsPdf* getPdf(PdfModelBuilder &pdfsModel, string type, int order, const char
   }
 }
 
+void runFit(RooAbsPdf *pdf, RooDataSet *data, double *NLL, int *stat_t, int MaxTries){
+
+	int ntries=0;
+  	RooArgSet *params_test = pdf->getParameters((const RooArgSet*)(0));
+	//std::cout << " BEFORE ITERATIONS-------------------------------" << std::endl;
+	//params_test->Print("v");
+	int stat=1;
+	double minnll=10e8;
+	while (stat!=0){
+	  if (ntries>=MaxTries) break;
+	  //std::cout << "----------------------------- BEFORE FIT-------------------------------" << std::endl;
+	  //params_test->Print("v");
+	  //std::cout << "-----------------------------------------------------------------------" << std::endl;
+	  RooFitResult *fitTest = pdf->fitTo(*data,RooFit::Save(1)
+		,RooFit::Minimizer("Minuit2","minimize"));
+          stat = fitTest->status();
+	  minnll = fitTest->minNll();
+	  if (stat!=0) params_test->assignValueOnly(fitTest->randomizePars());
+	  ntries++; 
+	}
+	*stat_t = stat;
+	*NLL = minnll;
+}
 double getProbabilityFtest(double chi2, int ndof,RooAbsPdf *pdfNull, RooAbsPdf *pdfTest, RooRealVar *mass, RooDataSet *data, std::string name){
  
   double prob_asym = TMath::Prob(chi2,ndof);
@@ -192,7 +215,7 @@ double getProbabilityFtest(double chi2, int ndof,RooAbsPdf *pdfNull, RooAbsPdf *
 
 }
 
-double getGoodnessOfFit(RooRealVar *mass, RooAbsPdf *mpdf, RooAbsData *data, std::string name){
+double getGoodnessOfFit(RooRealVar *mass, RooAbsPdf *mpdf, RooDataSet *data, std::string name){
 
   double prob;
   int ntoys = 1000;
@@ -272,7 +295,7 @@ double getGoodnessOfFit(RooRealVar *mass, RooAbsPdf *mpdf, RooAbsData *data, std
 
 }
 
-void plot(RooRealVar *mass, RooAbsPdf *pdf, RooAbsData *data, string name, int status, double *prob){
+void plot(RooRealVar *mass, RooAbsPdf *pdf, RooDataSet *data, string name, int status, double *prob){
   
   // Chi2 taken from full range fit
   RooPlot *plot_chi2 = mass->frame();
@@ -310,7 +333,7 @@ void plot(RooRealVar *mass, RooAbsPdf *pdf, RooAbsData *data, string name, int s
   delete canv;
   delete lat;
 }
-void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooAbsData *data, string name, int cat, int bestFitPdf=-1){
+void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooDataSet *data, string name, int cat, int bestFitPdf=-1){
   
   int color[7] = {kBlue,kRed,kMagenta,kGreen+1,kOrange+7,kAzure+10,kBlack};
   TCanvas *canv = new TCanvas();
@@ -354,7 +377,7 @@ void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooAbsData
   delete canv;
 }
 
-void plot(RooRealVar *mass, map<string,RooAbsPdf*> pdfs, RooAbsData *data, string name, int cat, int bestFitPdf=-1){
+void plot(RooRealVar *mass, map<string,RooAbsPdf*> pdfs, RooDataSet *data, string name, int cat, int bestFitPdf=-1){
   
   int color[7] = {kBlue,kRed,kMagenta,kGreen+1,kOrange+7,kAzure+10,kBlack};
   TCanvas *canv = new TCanvas();
@@ -409,10 +432,8 @@ void transferMacros(TFile *inFile, TFile *outFile){
     }
   }
 }
-int getBestFitFunction(RooMultiPdf *bkg, RooAbsData *data, RooCategory *cat, bool silent=false){
+int getBestFitFunction(RooMultiPdf *bkg, RooDataSet *data, RooCategory *cat, bool silent=false){
 
-	RooRealVar nBackground("bkgshape_norm","nbkg",data->sumEntries(),0,10E8);
-	RooExtendPdf extPdf("internal","testextend",*bkg,nBackground);
 
 	double global_minNll = 1E10;
 	int best_index = 0;
@@ -425,14 +446,14 @@ int getBestFitFunction(RooMultiPdf *bkg, RooAbsData *data, RooCategory *cat, boo
 	params->snapshot(clean);
 	if (!silent) {
 		std::cout << "CLEAN SET OF PARAMETERS" << std::endl;
-		params->Print("V");
+		//params->Print("V");
 		std::cout << "-----------------------" << std::endl;
 	}
 	
 	//bkg->setDirtyInhibit(1);
-	RooAbsReal *nllm = bkg->createNLL(*data);
-	RooMinimizer minim(*nllm);
-	minim.setStrategy(1);
+	//RooAbsReal *nllm = bkg->createNLL(*data);
+	//RooMinimizer minim(*nllm);
+	//minim.setStrategy(1);
 	
 	for (int id=0;id<number_of_indeces;id++){		
 		params->assignValueOnly(clean);
@@ -441,25 +462,35 @@ int getBestFitFunction(RooMultiPdf *bkg, RooAbsData *data, RooCategory *cat, boo
 		//RooAbsReal *nllm = bkg->getCurrentPdf()->createNLL(*data);
 
 		if (!silent) {
-			std::cout << "BEFORE FITTING" << std::endl;
+			/*
+			std::cout << "BEFORE  MAKING FIT" << std::endl;
 			params->Print("V");
-			std::cout << "-----------------------" << std::endl;
+			std::cout << "-----------------------" << std::endl;		
+			*/
 		}
 		
-		minim.minimize("Minuit2","minimize");
-		double minNll = (nllm->getVal())+bkg->getCorrection();
+		//minim.minimize("Minuit2","minimize");
+		double minNll=0; //(nllm->getVal())+bkg->getCorrection();
+		int fitStatus=1;		
+		runFit(bkg->getCurrentPdf(),data,&minNll,&fitStatus,/*max iterations*/10);
+		// Add the penalty
+
+		minNll=minNll+bkg->getCorrection();
+
 		if (!silent) {
+			/*
 			std::cout << "After Minimization ------------------  " <<std::endl;
 			std::cout << bkg->getCurrentPdf()->GetName() << " " << minNll <<std::endl;
 			bkg->Print("v");
 			bkg->getCurrentPdf()->getParameters(*data)->Print("V");
 			std::cout << " ------------------------------------  " << std::endl;
 	
-			std::cout << "AFTER FITTING" << std::endl;
 			params->Print("V");
+			*/
+			std::cout << "AFTER FITTING" << std::endl;
 			std::cout << " Function was " << bkg->getCurrentPdf()->GetName() <<std::endl;
 			std::cout << " Correction Applied is " << bkg->getCorrection() <<std::endl;
-			std::cout << " NLL + c = " <<std::setprecision(10) <<  minNll << std::endl;
+			std::cout << " NLL + c = " <<  minNll << std::endl;
 			std::cout << "-----------------------" << std::endl;
 		}
 			
@@ -474,30 +505,9 @@ int getBestFitFunction(RooMultiPdf *bkg, RooAbsData *data, RooCategory *cat, boo
 	
 	if (!silent) {
 		std::cout << "Best fit Function -- " << bkg->getCurrentPdf()->GetName() << " " << cat->getIndex() <<std::endl;
-		bkg->getCurrentPdf()->getParameters(*data)->Print("v");
+		//bkg->getCurrentPdf()->getParameters(*data)->Print("v");
 	}
 	return best_index;
-}
-void runFit(RooAbsPdf *pdf, RooDataSet *data, double *NLL, int *stat_t, int MaxTries){
-
-	int ntries;
-  	RooArgSet *params_test = pdf->getParameters((const RooArgSet*)(0));
-	std::cout << " BEFORE ITERATIONS-------------------------------" << std::endl;
-	params_test->Print("v");
-	int stat=1;
-	while (stat!=0){
-	  if (ntries>=MaxTries) break;
-	  std::cout << "----------------------------- BEFORE FIT-------------------------------" << std::endl;
-	  params_test->Print("v");
-	  std::cout << "-----------------------------------------------------------------------" << std::endl;
-	  RooFitResult *fitTest = pdf->fitTo(*data,RooFit::Save(1)
-		,RooFit::Minimizer("Minuit2","minimize"));
-          stat = fitTest->status();
-	  *NLL = fitTest->minNll();
-	  if (stat!=0) params_test->assignValueOnly(fitTest->randomizePars());
-	  ntries++; 
-	}
-	*stat_t = stat;
 }
 
 int main(int argc, char* argv[]){
@@ -702,7 +712,7 @@ int main(int argc, char* argv[]){
 	  if (prev_pdf!=NULL){
 	    prob = getProbabilityFtest(chi2,order-prev_order,prev_pdf,bkgPdf,mass,data
 		   ,Form("%s/Ftest_from_%s%d_cat%d.pdf",outDir.c_str(),funcType->c_str(),order,cat));
-	    std::cout << " Toys Prob == " << prob << std::endl;
+	    std::cout << " F-test Prob(chi2>chi2(data) == " << prob << std::endl;
 	  } else {
 	    prob = 0;
 	  }
@@ -808,9 +818,9 @@ int main(int argc, char* argv[]){
 	  RooCategory catIndex(Form("pdfindex_%d_%s",cat,ext.c_str()),"c");
 	  RooMultiPdf *pdf = new RooMultiPdf(Form("CMS_hgg_cat%d_%s_bkgshape",cat,ext.c_str()),"all pdfs",catIndex,storedPdfs);
 	  RooRealVar nBackground(Form("CMS_hgg_cat%d_%s_bkgshape_norm",cat,ext.c_str()),"nbkg",data->sumEntries(),0,10E8);
-
+	  nBackground.removeRange();
 	  //double check the best pdf!
-	  int bestFitPdfIndex = getBestFitFunction(pdf,data,&catIndex,true);
+	  int bestFitPdfIndex = getBestFitFunction(pdf,data,&catIndex,!verbose);
 	  catIndex.setIndex(bestFitPdfIndex);
 	  std::cout << "// ------------------------------------------------------------------------- //" <<std::endl; 
 	  std::cout << "Created MultiPdf " << pdf->GetName() << ", in Category " << cat << " with a total of " << catIndex.numTypes() << " pdfs"<< std::endl;
