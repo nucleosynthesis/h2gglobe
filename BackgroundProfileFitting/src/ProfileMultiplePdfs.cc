@@ -134,6 +134,7 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::profileLikelihood(RooAbsD
   low  = bestFitVal-2.5*bestFitErr;
   high = bestFitVal+2.5*bestFitErr;
   std::vector<float> scanValues;
+  stepsize=stepsize*bestFitErr;
   for (float v=low; v<(high+stepsize); v+=stepsize){
     scanValues.push_back(v);	
     if (v<bestFitVal && v+stepsize>bestFitVal) scanValues.push_back((float)bestFitVal);
@@ -186,6 +187,7 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::computeEnvelope(pair<doub
   }
   // now find envelope and apply correction
   float globalMin=1.e8;
+  std::string bestFitPdf;
   for (int p=0; p<npoints; p++){
     float minPoint=1.e8;
     double x,y;
@@ -202,9 +204,13 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::computeEnvelope(pair<doub
       if (valWithPenalty<minPoint){
         minPoint=valWithPenalty;
         //envelopeNLL->SetPoint(p,x,valWithPenalty);
-        if (minPoint<globalMin) globalMin=minPoint;
+        if (minPoint<globalMin) {
+		globalMin=minPoint;
+		bestFitPdf=mIt->first;
+	}
       }
       correctedMinNlls[mIt->first]->SetPoint(p,x,valWithPenalty);
+      correctedMinNlls[mIt->first]->SetTitle((mIt->first).c_str());
       //mIt->second->SetPoint(p,x,valWithPenalty);
     }
   }
@@ -247,6 +253,8 @@ pair<double,map<string,TGraph*> > ProfileMultiplePdfs::computeEnvelope(pair<doub
   }
   */
   envelopeNLL->SetName(name.c_str());
+  envelopeNLL->SetTitle(bestFitPdf.c_str());
+	
   correctedMinNlls.insert(pair<string,TGraph*>("envelope",envelopeNLL));
   return pair<double,map<string,TGraph*> >(envelopeMin,correctedMinNlls);
 
@@ -280,6 +288,7 @@ map<string,TGraph*> ProfileMultiplePdfs::profileLikelihoodEnvelope(RooAbsData *d
   low  = bestFitVal-2.5*bestFitErr;
   high = bestFitVal+2.5*bestFitErr;
   std::vector<float> scanValues;
+  stepsize=stepsize*bestFitErr;
   for (float v=low; v<(high+stepsize); v+=stepsize){
     scanValues.push_back(v);
     if (v<bestFitVal && v+stepsize>bestFitVal) scanValues.push_back((float)bestFitVal);

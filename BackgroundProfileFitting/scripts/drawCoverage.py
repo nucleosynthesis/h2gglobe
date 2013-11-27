@@ -45,9 +45,11 @@ def makePullPlot(h,ext,truth,usefit):
 	lLow.Draw()
 	lHigh.Draw()
         h.SetTitle("")
-
-        c.Print('%s/%s_%.1f_%s_pull.pdf'%(options.outDir,ext,truth,h.GetName()))
-    	c.Print('%s/%s_%.1f_%s_pull.png'%(options.outDir,ext,truth,h.GetName()))
+	h.GetXaxis().SetTitle("pull")
+	h.GetYaxis().SetTitle("# Toys")
+	h.GetYaxis().SetTitleOffset(1.2)
+        c.Print('%s/%s_%.1f_%.1f_%s_pull.pdf'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
+    	c.Print('%s/%s_%.1f_%.1f_%s_pull.png'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
 
 def makePlot():
   
@@ -107,6 +109,8 @@ def makePlot():
   print truth_mods
 
   canv = r.TCanvas()
+  canv.SetGridy(1)
+  canv.SetGridx(1)
 
   siglines=[]
   sigboxes=[]
@@ -159,6 +163,7 @@ def makePlot():
           graphDict[ptype][stype].SetLineColor(graphCol[c])
           graphDict[ptype][stype].SetMarkerColor(graphCol[c])
           graphDict[ptype][stype].SetFillColor(graphCol[c])
+          graphDict[ptype][stype].SetLineColor(1)
           graphDict[ptype][stype].SetFillStyle(graphFil[c])
     
     val_arr = valToFileDict.keys()
@@ -240,6 +245,7 @@ def makePlot():
     dummyHist.Draw("AXISsame")
     for c, stype in enumerate(scanTypes):
       graphDict['Bias'][stype].Draw("E3same")
+      graphDict['Bias'][stype].Draw("Lsame")
       if options.runMasses: graphDict['Bias'][stype].SetName('%s_cat%d_mass_%s_%s_bias'%(options.year,options.cat,truth,stype))
       else: graphDict['Bias'][stype].SetName('%s_cat%d_mu_%s_%s_bias'%(options.year,options.cat,truth,stype))
       outf.cd()
@@ -255,6 +261,7 @@ def makePlot():
     dummyHist.Draw("AXISsame")
     for c, stype in enumerate(scanTypes):
       graphDict['Pull'][stype].Draw("E3same")
+      graphDict['Pull'][stype].Draw("Lsame")
       if options.runMasses: graphDict['Pull'][stype].SetName('%s_cat%d_mass_%s_%s_pull'%(options.year,options.cat,truth,stype))
       else: graphDict['Pull'][stype].SetName('%s_cat%d_mu_%s_%s_pull'%(options.year,options.cat,truth,stype))
       outf.cd()
