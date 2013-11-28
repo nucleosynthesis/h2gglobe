@@ -56,13 +56,13 @@ def makePlot():
   if options.runMasses:
     valerr = 5 
     valTitle = "m_{H} (GeV)"
-    ext = 'mass'
+    ext = 'mass_mu%.1f'%options.injectVal
     xlow = 105
     xhigh = 155
   else:
     valerr = 0.25
     valTitle = "#mu_{gen}"
-    ext = 'mu'
+    ext = 'mu_mass%.1f'%options.injectVal
     xlow = 0.
     xhigh = 2.
 
