@@ -472,7 +472,7 @@ int getBestFitFunction(RooMultiPdf *bkg, RooDataSet *data, RooCategory *cat, boo
 		//minim.minimize("Minuit2","minimize");
 		double minNll=0; //(nllm->getVal())+bkg->getCorrection();
 		int fitStatus=1;		
-		runFit(bkg->getCurrentPdf(),data,&minNll,&fitStatus,/*max iterations*/10);
+		runFit(bkg->getCurrentPdf(),data,&minNll,&fitStatus,/*max iterations*/3);
 		// Add the penalty
 
 		minNll=minNll+bkg->getCorrection();
@@ -705,7 +705,7 @@ int main(int argc, char* argv[]){
           //RooFitResult *fitRes = bkgPdf->fitTo(*data,Save(true),RooFit::Minimizer("Minuit2","minimize"));
 	  int fitStatus = 0;
           //thisNll = fitRes->minNll();
-	  runFit(bkgPdf,data,&thisNll,&fitStatus,/*max iterations*/10);//bkgPdf->fitTo(*data,Save(true),RooFit::Minimizer("Minuit2","minimize"));
+	  runFit(bkgPdf,data,&thisNll,&fitStatus,/*max iterations*/3);//bkgPdf->fitTo(*data,Save(true),RooFit::Minimizer("Minuit2","minimize"));
  	  if (fitStatus!=0) std::cout << "Warning -- Fit status for " << bkgPdf->GetName() << " at " << fitStatus <<std::endl;
           chi2 = 2.*(prevNll-thisNll);
           if (chi2<0. && order>1) chi2=0.;
@@ -758,7 +758,7 @@ int main(int argc, char* argv[]){
           else {
            //RooFitResult *fitRes;
 	   int fitStatus=0;
-	   runFit(bkgPdf,data,&thisNll,&fitStatus,/*max iterations*/10);//bkgPdf->fitTo(*data,Save(true),RooFit::Minimizer("Minuit2","minimize"));
+	   runFit(bkgPdf,data,&thisNll,&fitStatus,/*max iterations*/3);//bkgPdf->fitTo(*data,Save(true),RooFit::Minimizer("Minuit2","minimize"));
            //thisNll = fitRes->minNll();
  	   if (fitStatus!=0) std::cout << "Warning -- Fit status for " << bkgPdf->GetName() << " at " << fitStatus <<std::endl;
 	   double myNll = 2.*thisNll;
@@ -818,7 +818,7 @@ int main(int argc, char* argv[]){
 	  RooCategory catIndex(Form("pdfindex_%d_%s",cat,ext.c_str()),"c");
 	  RooMultiPdf *pdf = new RooMultiPdf(Form("CMS_hgg_cat%d_%s_bkgshape",cat,ext.c_str()),"all pdfs",catIndex,storedPdfs);
 	  RooRealVar nBackground(Form("CMS_hgg_cat%d_%s_bkgshape_norm",cat,ext.c_str()),"nbkg",data->sumEntries(),0,10E8);
-	  nBackground.removeRange();
+	  //nBackground.removeRange(); // bug in roofit will break combine until dev branch brought in
 	  //double check the best pdf!
 	  int bestFitPdfIndex = getBestFitFunction(pdf,data,&catIndex,!verbose);
 	  catIndex.setIndex(bestFitPdfIndex);
