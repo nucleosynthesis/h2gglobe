@@ -153,6 +153,7 @@ def makeHists(cat=0,meanB=50,meanL=-4.,meanH=4.,errB=50,errL=0.5,errH=1.5,pullB=
       muVal = muInfo.at(0)
       err_low = muInfo.at(1)
       err_high  = muInfo.at(2)
+      print file.GetName(),graph.GetName(), muVal, err_low,err_high
       sym_err = (err_low+err_high)/2.
 
       if muVal<options.expectSignal: pull = (muVal-options.expectSignal)/err_high	
@@ -162,7 +163,7 @@ def makeHists(cat=0,meanB=50,meanL=-4.,meanH=4.,errB=50,errL=0.5,errH=1.5,pullB=
 	
       #print truth, mytype, '%4.2f  %4.2f  %4.2f  %4.2f'%(muVal,err_low,err_high,sym_err)
       
-      if muVal>=999. or sym_err>=999. or sym_err<0.001: continue
+      if muVal>=99. or sym_err>=99. or abs(err_low)>99. or abs(err_high)>99.: continue
 
       histMap[mytype][truth].Fill(muVal)
       histErrMap[mytype][truth].Fill(sym_err)

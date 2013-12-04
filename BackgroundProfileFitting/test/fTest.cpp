@@ -223,7 +223,7 @@ double getGoodnessOfFit(RooRealVar *mass, RooAbsPdf *mpdf, RooDataSet *data, std
   // Routine to calculate the goodness of fit. 
   name+="_gofTest.pdf";
   RooRealVar norm("norm","norm",data->sumEntries(),0,10E6);
-  norm.removeRange();
+  //norm.removeRange();
 
   RooExtendPdf *pdf = new RooExtendPdf("ext","ext",*mpdf,norm);
 

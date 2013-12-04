@@ -86,7 +86,7 @@ def makePlot():
   muPullBand.SetMarkerColor(r.kGray)
 
   #scanTypes=['Fab','Paul','Chi2','AIC']
-  scanTypes = ['Fab','Chi2']
+  scanTypes = ['Chi2']
   graphCol=[r.kBlue,r.kRed,r.kGreen+1,r.kMagenta]
   graphFil=[1001,1001]
   #graphFil=[3144,3190,3002,3002]
@@ -97,15 +97,43 @@ def makePlot():
 
   valToFileDict={}
   for i, expM in enumerate(options.expVals):
-    valToFileDict[float(expM)] = options.files[i]
+    finame = options.files[i]
+    if "/eos/cms/" in finame: 
+      #options.files[i]=options.files[i].strip("/eos/cms/")
+      finame =  "root://eoscms//"+(finame.lstrip("/"))
+
+      valToFileDict[float(expM)] = finame
+      options.files[i]=finame
+    else: valToFileDict[float(expM)] = finame
 
   truth_mods=[]
-  dummyFile = r.TFile.Open(options.files[0])
+  dummyIndex = 0
+  FileIsOk = False
+  dummyFile=0
+
+  while not FileIsOk:
+    if dummyIndex >= len(options.files): break
+    print "Trying ",options.files[dummyIndex]
+    dummyFile = r.TFile.Open(options.files[dummyIndex])
+    try:
+      kkeys = dummyFile.GetListOfKeys()
+      if (len(kkeys))>0:FileIsOk=True
+      else:
+	dummyIndex+=1
+	FileIsOk=False
+    except:	
+	dummyIndex+=1
+        FileIsOk=False
+	
+	
+  if not FileIsOk: return
+
   for key in dummyFile.GetListOfKeys():
     name = key.GetName()
     truth = name.split('_mu')[0]
     if truth not in truth_mods: truth_mods.append(truth)
   dummyFile.Close()
+
   print truth_mods
 
   canv = r.TCanvas()
@@ -171,8 +199,15 @@ def makePlot():
     for p, val in enumerate(val_arr):
       f = r.TFile.Open(valToFileDict[val])
       for c, stype in enumerate(scanTypes):
+	
+        muBiasBand.SetPoint(p,val-5,0)
+        muBiasBand.SetPointError(p,valerr,0.2)
+        muPullBand.SetPoint(p,val-5,0)
+        muPullBand.SetPointError(p,valerr,0.14)
+
         hist = f.Get('%s_mu%s'%(truth,stype))
-	if type(hist)!=type(r.TH1F()): continue
+	if type(hist)!=type(r.TH1F()): 
+		continue
         if options.runMasses:
 	  if hist.GetRMS()==0: rms = 999 
 	  else: rms=hist.GetRMS()
@@ -182,6 +217,7 @@ def makePlot():
           graphDict['Bias'][stype].SetPoint(p,val,(hist.GetMean()-val)/hist.rms)
           graphDict['Bias'][stype].SetPointError(p,0,hist.GetMeanError()/hist.rms)
         histPull = f.Get('%s_mu%sPull'%(truth,stype))
+	histPull.Rebin(2)
 	histPull.Fit("gaus","","Q",histPull.GetMean()-1.5,histPull.GetMean()+1.5)
 
         if histPull.GetFunction("gaus"):
@@ -196,10 +232,6 @@ def makePlot():
           graphDict['Pull'][stype].SetPoint(p,val,histPull.GetMean())
           graphDict['Pull'][stype].SetPointError(p,0,histPull.GetMeanError())
 
-        muBiasBand.SetPoint(p,val-5,0)
-        muBiasBand.SetPointError(p,valerr,0.2)
-        muPullBand.SetPoint(p,val-5,0)
-        muPullBand.SetPointError(p,valerr,0.14)
 	"""
         for v, cov in enumerate(coverageValues):
           graph = f.Get('%s_mu%sCov%3.1f'%(truth,stype,cov))
@@ -276,6 +308,7 @@ if not options.datfile:
 else:
   f = open(options.datfile)
   cats = []
+  BASEDIR=""
   for linet in f.readlines():
     if linet.startswith('#') or linet.startswith('\n'): continue
     if linet.startswith('year'): 
@@ -285,12 +318,18 @@ else:
       vlist = (linet.split("="))[1]
       cats = [int(v) for v in vlist.split(",")] 
       continue
+    if "basedir=" in linet:
+      BASEDIR=linet.split("=")[1]
+      BASEDIR = BASEDIR.rstrip("\n")
+      continue
 
     linestouse = []
     if "{cat}" in linet :
 	for c in cats: linestouse.append(linet.replace("{cat}","%d"%c))
     else: linestouse.append(linet)
     for line in linestouse:
+     if "{basedir}" in line: 
+	line=line.replace("{basedir}",BASEDIR)
      opts = line.split()
      if opts[0].split('=')[1]=='mu':
       options.runMasses=False
