@@ -343,24 +343,34 @@ void PhotonAnalysis::load2DPuWeights(int typid, TDirectory * puFile, std::vector
     cout<<"Loading 2D pileup weights for typid " << typid << " for all run periods." << endl;
 
     rd_weights[typid].resize(targets.size());    
+    rd_nevents[typid].resize(targets.size());    
+    int ntots=0;
     for (unsigned int i=0; i<targets.size(); i++) {
-	std::cout<<targets[i]->GetName() << std::endl;
-	TH1* gen_pu = ((TH2F*)puFile->Get("pu_2D"))->ProjectionX("pileup", i+1, i+1);
-	assert( gen_pu != 0 );
-	TH1* hweigh =(TH1*)targets[i]->Clone();
-	hweigh->Reset("ICE");
-	hweigh->Divide(targets[i], gen_pu, 1., 1./gen_pu->Integral());
-	rd_weights[typid][i].clear();
-	for( int ii=1; ii<hweigh->GetNbinsX(); ++ii ) {
-	    rd_weights[typid][i].push_back(hweigh->GetBinContent(ii));
-	}
+        std::cout<<targets[i]->GetName() << std::endl;
+        TH1* gen_pu = ((TH2F*)puFile->Get("pu_2D"))->ProjectionX("pileup", i+1, i+1);
+        assert( gen_pu != 0 );
+        TH1* hweigh =(TH1*)targets[i]->Clone();
+        hweigh->Reset("ICE");
+        hweigh->Divide(targets[i], gen_pu, 1., 1./gen_pu->Integral());
+        rd_weights[typid][i].clear();
+        rd_nevents[typid][i]=gen_pu->Integral();
+        ntots+=gen_pu->GetEntries();
+        for( int ii=1; ii<hweigh->GetNbinsX(); ++ii ) {
+            rd_weights[typid][i].push_back(hweigh->GetBinContent(ii));
+        }
     }
-
+    std::cout << "rd_nevents[i] = "<<ntots<<" -- ";
+    for (unsigned int i=0; i<targets.size(); i++) {
+        rd_nevents[typid][i]/=ntots;
+        std::cout << " : " <<rd_nevents[typid][i];
+    }
+    std::cout<<std::endl;
+    //Normalize lumis x run
     std::cout << "pile-up 2D weights: ["<<typid<<"]";
     //std::cout << targets.size() << std::endl;
     for (int i=0; i<targets.size(); i++) {
-	std::copy(rd_weights[typid][i].begin(),rd_weights[typid][i].end(), std::ostream_iterator<double>(std::cout,","));
-	std::cout << std::endl;
+        std::copy(rd_weights[typid][i].begin(),rd_weights[typid][i].end(), std::ostream_iterator<double>(std::cout,","));
+        std::cout << std::endl;
     }
 }
 
@@ -369,7 +379,7 @@ float PhotonAnalysis::getPuWeight(int n_pu, int sample_type, SampleContainer* co
 
     if ( sample_type !=0 && puHist != "") {
 
-        bool hasSpecificWeight = weights.find( sample_type ) != weights.end();
+    bool hasSpecificWeight = weights.find( sample_type ) != weights.end();
 	bool hasSpecificWeight2D = rd_weights.find(sample_type) != rd_weights.end();
 	
 	if(!hasSpecificWeight && !hasSpecificWeight2D && container != 0 && container->pileup != 0 ) {
@@ -377,47 +387,55 @@ float PhotonAnalysis::getPuWeight(int n_pu, int sample_type, SampleContainer* co
 	    TFile * samplePu = TFile::Open(container->pileup.c_str());
 	    TKey* key = samplePu->FindKey("pu_2D");
 	    if (key != 0 && !puTargets.empty()) {
-		load2DPuWeights(sample_type, samplePu, puTargetHists);
-		hasSpecificWeight2D = true;
+            load2DPuWeights(sample_type, samplePu, puTargetHists);
+            hasSpecificWeight2D = true;
 	    } else {
-		loadPuWeights(sample_type, samplePu, puTargetHist);
-		hasSpecificWeight = true;
+            loadPuWeights(sample_type, samplePu, puTargetHist);
+            hasSpecificWeight = true;
 	    }
 	    samplePu->Close();
 	} else if( sample_type < 0 && !hasSpecificWeight && !hasSpecificWeight2D && warnMe) {
-            std::cerr  << "WARNING no pu weights specific for sample " << sample_type << std::endl;
-        }
-
+        std::cerr  << "WARNING no pu weights specific for sample " << sample_type << std::endl;
+    }
+    
 	if (hasSpecificWeight2D) {
 	    Int_t index = -1;
 	    
 	    if (run <= 197495)
-		index = 0;
+            index = 0;
 	    else if (run > 197495 && run <= 203767)
-		index = 1;
+            index = 1;
 	    else if (run > 203767)
-		index = 2;
+            index = 2;
 	    else {
-		std::cout << "ERROR: it is not possible to weight this event (unrecognized run " << run << ")" << std::endl;
-		abort();
+            std::cout << "ERROR: it is not possible to weight this event (unrecognized run " << run << ")" << std::endl;
+            abort();
 	    }
 	    std::vector<double>& puweights = rd_weights[sample_type][index];
+        //= lumi_period / lumi_tot * Nev_tot / Nev_period
+        float lumiReWeight=1.;
+        if( ! puLumis.empty() ) {  //  if empty not do anything
+            assert( puLumis.size() > index ) ;
+            lumiReWeight=puLumis[index];  //are normalized: sum to one
+            lumiReWeight/=rd_nevents[sample_type][index];
+        }
+        /// std::cout<< " LUMI ReWeight="<<lumiReWeight<<endl;
 	    if (n_pu < puweights.size()) {
-		return puweights[n_pu];
+            return puweights[n_pu] * lumiReWeight;
 	    }
 	} 
-
+    
 	if (hasSpecificWeight) {
 	    std::vector<double> & puweights = weights[sample_type];
-	    if(n_pu<puweights.size()){
-		return puweights[n_pu];
+	    if(n_pu<puweights.size()) {
+            return puweights[n_pu];
 	    }
 	    else{ //should not happen as we have a weight for all simulated n_pu multiplicities!
-		cout <<"n_pu ("<< n_pu<<") too big ("<<puweights.size()<<") ["<< sample_type <<"], event will not be reweighted for pileup"<<endl;
+            cout <<"n_pu ("<< n_pu<<") too big ("<<puweights.size()<<") ["<< sample_type <<"], event will not be reweighted for pileup"<<endl;
 	    }
 	}
     }
-
+    
     return 1.;
 }
 
@@ -1230,54 +1248,58 @@ void PhotonAnalysis::Init(LoopAll& l)
     assert( ! scale_offset_error_file.empty() && ! smearing_file.empty() );
     
     // Use the same format used for the run-dependent energy corrections
-    EnergySmearer::energySmearingParameters::eScaleVector tmp_scale_offset, tmp_smearing;
-    EnergySmearer::energySmearingParameters::phoCatVector tmp_scale_cat, tmp_smearing_cat;
-    readEnergyScaleOffsets(scale_offset_error_file, tmp_scale_offset, tmp_scale_cat,false);
-    readEnergyScaleOffsets(smearing_file, tmp_smearing, tmp_smearing_cat,false);
+    EnergySmearer::energySmearingParameters::eScaleVector tmp_smear_scale_offset, tmp_smear_smearing;
+    EnergySmearer::energySmearingParameters::phoCatVector tmp_smear_scale_cat, tmp_smear_smearing_cat;
+    readEnergyScaleOffsets(scale_offset_error_file, tmp_smear_scale_offset, tmp_smear_scale_cat,false);
+    readEnergyScaleOffsets(smearing_file, tmp_smear_smearing, tmp_smear_smearing_cat,false);
     
     // make sure that the scale correction and smearing info is as expected
-    assert( tmp_scale_offset.size() == 1); assert( tmp_smearing.size() == 1 );
-    assert( ! tmp_smearing_cat.empty() );
-    /// assert( tmp_smearing_cat == tmp_scale_cat );
+    assert( tmp_smear_scale_offset.size() == 1); assert( tmp_smear_smearing.size() == 1 );
+    assert( ! tmp_smear_smearing_cat.empty() );
+    /// assert( tmp_smear_smearing_cat == tmp_smear_scale_cat );
     
     // copy the read info to the smarer parameters
     eSmearPars.categoryType = "Automagic";
     eSmearPars.byRun = false;
-    eSmearPars.n_categories = tmp_smearing_cat.size();
-    eSmearPars.photon_categories = tmp_smearing_cat;
+    eSmearPars.n_categories = tmp_smear_smearing_cat.size();
+    eSmearPars.photon_categories = tmp_smear_smearing_cat;
     
-    eSmearPars.scale_offset = tmp_scale_offset[0].scale_offset;
-    eSmearPars.scale_offset_error = tmp_scale_offset[0].scale_offset_error;
-    eSmearPars.scale_stocastic_offset = tmp_scale_offset[0].scale_stocastic_offset;
-    eSmearPars.scale_stocastic_offset_error = tmp_scale_offset[0].scale_stocastic_offset_error;
-    eSmearPars.scale_stocastic_pivot = tmp_scale_offset[0].scale_stocastic_pivot;
+    eSmearPars.scale_offset = tmp_smear_scale_offset[0].scale_offset;
+    eSmearPars.scale_offset_error = tmp_smear_scale_offset[0].scale_offset_error;
+    eSmearPars.scale_stocastic_offset = tmp_smear_scale_offset[0].scale_stocastic_offset;
+    eSmearPars.scale_stocastic_offset_error = tmp_smear_scale_offset[0].scale_stocastic_offset_error;
+    eSmearPars.scale_stocastic_pivot = tmp_smear_scale_offset[0].scale_stocastic_pivot;
     
-    eSmearPars.smearing_sigma = tmp_smearing[0].scale_offset;
-    eSmearPars.smearing_sigma_error = tmp_smearing[0].scale_offset_error;
-    eSmearPars.smearing_stocastic_sigma = tmp_smearing[0].scale_stocastic_offset;
-    eSmearPars.smearing_stocastic_sigma_error = tmp_smearing[0].scale_stocastic_offset_error;
-    eSmearPars.smearing_stocastic_pivot = tmp_smearing[0].scale_stocastic_pivot;
-
+    eSmearPars.smearing_sigma = tmp_smear_smearing[0].scale_offset;
+    eSmearPars.smearing_sigma_error = tmp_smear_smearing[0].scale_offset_error;
+    eSmearPars.smearing_stocastic_sigma = tmp_smear_smearing[0].scale_stocastic_offset;
+    eSmearPars.smearing_stocastic_sigma_error = tmp_smear_smearing[0].scale_stocastic_offset_error;
+    eSmearPars.smearing_stocastic_pivot = tmp_smear_smearing[0].scale_stocastic_pivot;
+    
     // Energy resolution parameters used for diphotonBDT input
-    massResoPars = eSmearPars;
     if( ! mass_resol_file.empty() ) {
-        EnergySmearer::energySmearingParameters::eScaleVector tmp_smearing;
-        EnergySmearer::energySmearingParameters::phoCatVector tmp_smearing_cat;
-        readEnergyScaleOffsets(mass_resol_file, tmp_smearing, tmp_smearing_cat,false);
+        EnergySmearer::energySmearingParameters::eScaleVector tmp_mres_smearing;
+        EnergySmearer::energySmearingParameters::phoCatVector tmp_mres_smearing_cat;
+        readEnergyScaleOffsets(mass_resol_file, tmp_mres_smearing, tmp_mres_smearing_cat,false);
 
         // make sure that the scale correction and smearing info is as expected
-        assert( tmp_smearing.size() == 1 );
-        assert( ! tmp_smearing_cat.empty() );
+        assert( tmp_mres_smearing.size() == 1 );
+        assert( ! tmp_mres_smearing_cat.empty() );
 
         // copy the read info to the smarer parameters
         massResoPars.categoryType = "Automagic";
         massResoPars.byRun = false;
-        massResoPars.n_categories = tmp_smearing_cat.size();
-        massResoPars.photon_categories = tmp_smearing_cat;
+        massResoPars.n_categories = tmp_mres_smearing_cat.size();
+        massResoPars.photon_categories = tmp_mres_smearing_cat;
 
-        massResoPars.smearing_sigma = tmp_smearing[0].scale_offset;
-        massResoPars.smearing_stocastic_sigma = tmp_smearing[0].scale_stocastic_offset;
-        massResoPars.smearing_sigma_error = tmp_smearing[0].scale_offset_error;
+        massResoPars.smearing_sigma = tmp_mres_smearing[0].scale_offset;
+        massResoPars.smearing_stocastic_sigma = tmp_mres_smearing[0].scale_stocastic_offset;
+        massResoPars.smearing_sigma_error = tmp_mres_smearing[0].scale_offset_error;
+        massResoPars.smearing_stocastic_sigma = tmp_mres_smearing[0].scale_stocastic_offset;
+        massResoPars.smearing_stocastic_sigma_error = tmp_mres_smearing[0].scale_stocastic_offset_error;
+        massResoPars.smearing_stocastic_pivot = tmp_mres_smearing[0].scale_stocastic_pivot;
+    } else {
+        massResoPars = eSmearPars;
     }
 
     // energy scale systematics to MC
@@ -1352,16 +1374,25 @@ void PhotonAnalysis::Init(LoopAll& l)
         if(PADEBUG)
             cout << "Opening PU file END"<<endl;
     } else if ( puHist == "auto" ) {
-	TFile * puTargetFile = TFile::Open( puTarget );
-	assert( puTargetFile != 0 );
-	puTargetHist = (TH1*)puTargetFile->Get("pileup");
-	if( puTargetHist == 0 ) { puTargetHist = (TH1*)puTargetFile->Get("target_pileup"); }
-	puTargetHist = (TH1*)puTargetHist->Clone();
-	puTargetHist->SetDirectory(0);
-	puTargetHist->Scale( 1. / puTargetHist->Integral() );
-	puTargetFile->Close();
+        TFile * puTargetFile = TFile::Open( puTarget );
+        assert( puTargetFile != 0 );
+        puTargetHist = (TH1*)puTargetFile->Get("pileup");
+        if( puTargetHist == 0 ) { puTargetHist = (TH1*)puTargetFile->Get("target_pileup"); }
+        puTargetHist = (TH1*)puTargetHist->Clone();
+        puTargetHist->SetDirectory(0);
+        puTargetHist->Scale( 1. / puTargetHist->Integral() );
+        puTargetFile->Close();
     }
-
+    // Per-run period luminosities
+    double tot= std::accumulate(puLumis.begin(),puLumis.end(),0.);
+    std::cout << "Per run-range lumi reweight tot: "<< tot;
+    for(unsigned int index=0;index<puLumis.size();index++) {
+        puLumis[index]/=tot; 
+        std::cout << " ["<<index<<"]" << puLumis[index];
+    }
+    std::cout<<std::endl;
+    
+    
     // Jet handling
     if( recomputeBetas || recorrectJets || rerunJetMva || recomputeJetWp || applyJer || applyJecUnc || emulateJetResponse 
 	|| l.typerun != l.kFill ) {
