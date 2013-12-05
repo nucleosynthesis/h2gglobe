@@ -51,6 +51,20 @@ def makePullPlot(h,ext,truth,usefit):
         c.Print('%s/%s_%.1f_%.1f_%s_pull.pdf'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
     	c.Print('%s/%s_%.1f_%.1f_%s_pull.png'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
 
+def makeTypePlot(h,ext,truth):
+	r.gROOT.SetBatch(1)
+	r.gStyle.SetOptStat(0)
+	c=r.TCanvas("c","c",600,600)
+	h.GetYaxis().SetTitle("# Occurances")
+	h.GetYaxis().SetTitleOffset(1.2)
+	h.Draw("hist")
+	h.SetLineWidth(2)
+	h.SetLineColor(1)
+	h.SetFillColor(r.kBlue-3)
+        c.Print('%s/%s_%.1f_%.1f_%s_type.pdf'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
+    	c.Print('%s/%s_%.1f_%.1f_%s_type.png'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
+	
+
 def makePlot():
   
   if options.runMasses:
@@ -87,7 +101,7 @@ def makePlot():
 
   #scanTypes=['Fab','Paul','Chi2','AIC']
   scanTypes = ['Chi2']
-  graphCol=[r.kBlue,r.kRed,r.kGreen+1,r.kMagenta]
+  graphCol=[r.kBlue-3,r.kRed,r.kGreen+1,r.kMagenta]
   graphFil=[1001,1001]
   #graphFil=[3144,3190,3002,3002]
   #label=['Hgg Nominal Pol','Envelope (no pen)','Envelope (1/dof pen)','Envelope (2/dof pen)']
@@ -216,6 +230,7 @@ def makePlot():
         else:
           graphDict['Bias'][stype].SetPoint(p,val,(hist.GetMean()-val)/hist.rms)
           graphDict['Bias'][stype].SetPointError(p,0,hist.GetMeanError()/hist.rms)
+
         histPull = f.Get('%s_mu%sPull'%(truth,stype))
 	histPull.Rebin(2)
 	histPull.Fit("gaus","","Q",histPull.GetMean()-1.5,histPull.GetMean()+1.5)
@@ -239,6 +254,8 @@ def makePlot():
           y = r.Double(0.)
           #graphDict['Coverage'][stype][v].SetPointError(p,valerr,yerr)
    	"""
+        histType = f.Get('%s_mu%sType'%(truth,stype))
+	makeTypePlot(histType,ext,val)
     muBiasBand.SetPoint(len(options.expVals),155,0)
     muBiasBand.SetPointError(len(options.expVals),valerr,0.2)
     muPullBand.SetPoint(len(options.expVals),155,0)
