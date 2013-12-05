@@ -110,7 +110,8 @@ def makeHists(cat=0,meanB=50,meanL=-4.,meanH=4.,errB=50,errL=0.5,errH=1.5,pullB=
     for mod in truth_models:
       histMap[type][mod] = r.TH1F('%s_mu%s'%(mod,type),'%s_mu%s'%(mod,type),meanB,meanL,meanH)
       histErrMap[type][mod] = r.TH1F('%s_mu%sErr'%(mod,type),'%s_mu%sErr'%(mod,type),errB,errL,errH)
-      histPullMap[type][mod] = r.TH1F('%s_mu%sPull'%(mod,type),'%s_mu%sPull'%(mod,type),pullB,pullL,pullH)
+      bWidth = (pullH-pullL)/pullB # so we can center at 0
+      histPullMap[type][mod] = r.TH1F('%s_mu%sPull'%(mod,type),'%s_mu%sPull'%(mod,type),pullB,pullL-bWidth/2,pullH-bWidth/2)
       histTypeMap[type][mod] = {}
       graphCovMap[type][mod] = []
       counterCovMap[type][mod] = []
@@ -156,10 +157,11 @@ def makeHists(cat=0,meanB=50,meanL=-4.,meanH=4.,errB=50,errL=0.5,errH=1.5,pullB=
       print file.GetName(),graph.GetName(), muVal, err_low,err_high
       sym_err = (err_low+err_high)/2.
 
-      if muVal<options.expectSignal: pull = (muVal-options.expectSignal)/err_high	
-      else: pull = (muVal-options.expectSignal)/err_low
-
-      #pull = profiler.getPull(graph,options.expectSignal) ## need to fit best fit and truth for this
+      if (muVal-options.expectSignal)/sym_err < 0.5:
+        if muVal<options.expectSignal: pull = (muVal-options.expectSignal)/err_low	
+        else: pull = (muVal-options.expectSignal)/err_high
+      else:
+        pull = profiler.getPull(graph,options.expectSignal) ## need to fit best fit and truth for this
 	
       #print truth, mytype, '%4.2f  %4.2f  %4.2f  %4.2f'%(muVal,err_low,err_high,sym_err)
       
