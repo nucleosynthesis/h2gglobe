@@ -23,19 +23,12 @@ def makePullPlot(h,ext,truth,usefit):
 	r.gROOT.SetBatch(1)
 	c=r.TCanvas("c","c",600,600)
 	r.gStyle.SetOptFit(1111)
+	r.gStyle.SetOptStat(1)
 	h.SetMarkerStyle(20)
 	h.Sumw2()
 	h.SetMarkerSize(0.8)
 	h.Draw("p")
 	name = h.GetName()
-	if usefit: 
-		med = h.GetFunction("gaus").GetParameter(1)
-		up  = h.GetFunction("gaus").Eval(med)
-		l = r.TLine(med,0,med,up)
-		l.SetLineColor(2)
-		l.SetLineStyle(2)
-		l.SetLineWidth(2)
-		l.Draw()
 	lLow = r.TLine(-0.14,0,-0.14,h.GetMaximum())
 	lLow.SetLineColor(4)
 	lLow.SetLineWidth(4)
@@ -44,10 +37,41 @@ def makePullPlot(h,ext,truth,usefit):
 	lHigh.SetLineWidth(4)
 	lLow.Draw()
 	lHigh.Draw()
+	# Line of the median from Gaus
+	if usefit: 
+		med = h.GetFunction("gaus").GetParameter(1)
+		up  = h.GetFunction("gaus").Eval(med)
+		l = r.TLine(med,0,med,up)
+		l.SetLineColor(2)
+		l.SetLineStyle(2)
+		l.SetLineWidth(2)
+		l.Draw()
+	# Line of the mean which is used
+	med2 = h.GetMean()
+	up2  = h.GetFunction("gaus").Eval(med2)
+	l2 = r.TArrow(med2,up2,med2,0)
+	l2.SetLineColor(1)
+	l2.SetLineStyle(1)
+	l2.SetLineWidth(2)
+	l2.Draw()
+	
         h.SetTitle("")
 	h.GetXaxis().SetTitle("pull")
 	h.GetYaxis().SetTitle("# Toys")
 	h.GetYaxis().SetTitleOffset(1.2)
+	# Finally also add the coverage of the 1sigma interval 
+	lat = r.TLatex()
+	lat.SetNDC()
+	lat.SetTextFont(42)
+	lat.SetTextSize(0.04)
+	coverage=0.0;
+	
+	if usefit:
+	  if h.GetFunction("gaus").GetProb() >=0.5:
+	   tfunc= h.GetFunction("gaus")
+	   coverage=float(tfunc.Integral(-1,1))/tfunc.Integral(h.GetBinLowEdge(1),h.GetBinLowEdge(h.GetNbinsX()+1))
+	   lat.DrawLatex(0.12,0.8,"Cov(1#sigma)=%.1f %%"%(100.*coverage))
+
         c.Print('%s/%s_%.1f_%.1f_%s_pull.pdf'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
     	c.Print('%s/%s_%.1f_%.1f_%s_pull.png'%(options.outDir,ext,truth,options.injectVal,h.GetName()))
 
@@ -57,6 +81,14 @@ def makeTypePlot(h,ext,truth):
 	c=r.TCanvas("c","c",600,600)
 	h.GetYaxis().SetTitle("# Occurances")
 	h.GetYaxis().SetTitleOffset(1.2)
+	h.GetXaxis().SetLabelSize(0.09)
+
+        for i in range(1,h.GetNbinsX()+1):
+          lab = h.GetXaxis().GetBinLabel(i)
+          lab = lab[len("sb_paul_"):]
+          lab = lab[0:lab.find("_cat")]
+          h.GetXaxis().SetBinLabel(i,lab)
+
 	h.Draw("hist")
 	h.SetLineWidth(2)
 	h.SetLineColor(1)
@@ -100,8 +132,9 @@ def makePlot():
   muPullBand.SetMarkerColor(r.kGray)
 
   #scanTypes=['Fab','Paul','Chi2','AIC']
-  scanTypes = ['Chi2']
-  graphCol=[r.kBlue-3,r.kRed,r.kGreen+1,r.kMagenta]
+  scanTypes = ['Fab','Chi2']
+  #scanTypes = ['Chi2']
+  graphCol=[r.kRed,r.kBlue-3,r.kGreen+1,r.kMagenta]
   graphFil=[1001,1001]
   #graphFil=[3144,3190,3002,3002]
   #label=['Hgg Nominal Pol','Envelope (no pen)','Envelope (1/dof pen)','Envelope (2/dof pen)']
@@ -191,6 +224,8 @@ def makePlot():
             graphDict[ptype][stype].append(r.TGraphErrors())
             graphDict[ptype][stype][v].SetLineColor(graphCol[c])
             graphDict[ptype][stype][v].SetMarkerColor(graphCol[c])
+            graphDict[ptype][stype][v].SetMarkerStyle(21)
+            graphDict[ptype][stype][v].SetMarkerSize(0.8)
             graphDict[ptype][stype][v].SetFillColor(graphCol[c])
             graphDict[ptype][stype][v].SetFillStyle(graphFil[c])
           if c<len(scanTypes)/2:
@@ -232,28 +267,38 @@ def makePlot():
           graphDict['Bias'][stype].SetPointError(p,0,hist.GetMeanError()/hist.rms)
 
         histPull = f.Get('%s_mu%sPull'%(truth,stype))
-	histPull.Rebin(2)
-	histPull.Fit("gaus","","Q",histPull.GetMean()-1.5,histPull.GetMean()+1.5)
+	#histPull.Rebin(2)
+	histPull.Fit("gaus","","Q",histPull.GetMean()-4,histPull.GetMean()+4)
+        #Iterative Fit
 
-        if histPull.GetFunction("gaus"):
-	   makePullPlot(histPull,ext,val,1)
+        if histPull.GetFunction("gaus") :
+	  for fi in range(3):
+		newmean=histPull.GetFunction("gaus").GetParameter(1)
+		histPull.Fit("gaus","","Q",newmean-4.,newmean+4.)
+	  makePullPlot(histPull,ext,val,1)
 	else: 
 	   makePullPlot(histPull,ext,val,0)
 
-        if histPull.GetFunction("gaus"):
-          graphDict['Pull'][stype].SetPoint(p,val,histPull.GetFunction("gaus").GetParameter(1))
-          graphDict['Pull'][stype].SetPointError(p,0,histPull.GetFunction("gaus").GetParError(1))
+        if histPull.GetFunction("gaus") :
+	  if histPull.GetFunction("gaus").GetProb()<0.05:
+            graphDict['Pull'][stype].SetPoint(p,val,histPull.GetMean())
+            graphDict['Pull'][stype].SetPointError(p,0,histPull.GetMeanError())
+	  else:
+            graphDict['Pull'][stype].SetPoint(p,val,histPull.GetFunction("gaus").GetParameter(1))
+            graphDict['Pull'][stype].SetPointError(p,0,histPull.GetFunction("gaus").GetParError(1))
 	else:
-          graphDict['Pull'][stype].SetPoint(p,val,histPull.GetMean())
-          graphDict['Pull'][stype].SetPointError(p,0,histPull.GetMeanError())
+            graphDict['Pull'][stype].SetPoint(p,val,histPull.GetMean())
+            graphDict['Pull'][stype].SetPointError(p,0,histPull.GetMeanError())
 
-	"""
         for v, cov in enumerate(coverageValues):
           graph = f.Get('%s_mu%sCov%3.1f'%(truth,stype,cov))
           x = r.Double(0.)
           y = r.Double(0.)
-          #graphDict['Coverage'][stype][v].SetPointError(p,valerr,yerr)
-   	"""
+          graph.GetPoint(0,x,y)
+          yerr = graph.GetErrorY(0)
+	  graphDict['Coverage'][stype][v].SetPoint(p,val,y)
+          graphDict['Coverage'][stype][v].SetPointError(p,valerr,yerr)
+
         histType = f.Get('%s_mu%sType'%(truth,stype))
 	makeTypePlot(histType,ext,val)
     muBiasBand.SetPoint(len(options.expVals),155,0)
@@ -262,10 +307,11 @@ def makePlot():
     muPullBand.SetPointError(len(options.expVals),valerr,0.14)
 
     title=truth
-    title = title.replace('0sigma','0.10sigma')
-    title = title.replace('1sigma','0.25sigma')
-    title = title.replace('2sigma','0.50sigma')
-    title = title.replace('3sigma','1.00sigma')
+    #title = title.replace('0sigma','0.10sigma')
+    #title = title.replace('1sigma','0.25sigma')
+    #title = title.replace('2sigma','0.50sigma')
+    #title = title.replace('3sigma','1.00sigma')
+
     if options.runMasses:
       dummyHist.SetTitle('Category=%d  Truth=%s  #mu_{gen}=%3.1f'%(options.cat,title,options.injectVal))
     else:

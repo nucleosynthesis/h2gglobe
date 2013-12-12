@@ -228,7 +228,7 @@ int main(int argc, char* argv[]){
   //TH1F *muDistChi2 = new TH1F("muDistChi2","muDistChi2",int(20*(mu_high-mu_low)),mu_low,mu_high);
   //TH1F *muDistAIC = new TH1F("muDistAIC","muDistAIC",int(20*(mu_high-mu_low)),mu_low,mu_high);
   
-  mass->setBins(320);
+  mass->setBins(160); // is this too fine for the signal MC?
   RooDataSet *data = (RooDataSet*)bkgWS->data(Form("data_mass_cat%d",cat));
   //RooDataSet *data = (RooDataSet*)bkgWS->data(Form("data_cat%d_7TeV",cat));
   RooDataHist *dataBinned = new RooDataHist(Form("roohist_data_mass_cat%d",cat),Form("roohist_data_mass_cat%d",cat),RooArgSet(*mass),*data);
