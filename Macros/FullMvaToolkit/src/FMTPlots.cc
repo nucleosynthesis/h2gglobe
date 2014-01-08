@@ -507,13 +507,22 @@ void FMTPlots::makeNormPlot(){
   TGraph *dataN = new TGraph(getNumMHMasses());  
   TGraph *datadiff = new TGraph(getNumMHMasses());  
   vector<double> allMasses = getAllMH();
-  int i=0;
+  int i=0; int di=0;
   for (vector<double>::iterator mh=allMasses.begin(); mh!=allMasses.end(); mh++){
     RooRealVar *val = (RooRealVar*)outWS->var(Form("NBkgInSignal_mH%3.1f",*mh));
     TH1F *dataHist = (TH1F*)tFile->Get(Form("th1f_data_grad_%3.1f",*mh));
     normG->SetPoint(i,*mh,val->getVal());
-    dataN->SetPoint(i,*mh,dataHist->Integral());
-    datadiff->SetPoint(i,*mh,dataHist->Integral()-val->getVal());
+    if (blind_) {
+	if (*mh<110 || *mh > 150) {
+	  dataN->SetPoint(di,*mh,dataHist->Integral());
+          datadiff->SetPoint(di,*mh,dataHist->Integral()-val->getVal());
+	  di++;
+	}
+    } else {
+	  dataN->SetPoint(di,*mh,dataHist->Integral());
+          datadiff->SetPoint(di,*mh,dataHist->Integral()-val->getVal());
+	  di++;
+    }
     i++;
   }
   TCanvas *canv = new TCanvas();

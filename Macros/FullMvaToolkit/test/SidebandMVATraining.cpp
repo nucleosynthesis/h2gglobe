@@ -40,7 +40,7 @@ bool skipTesting_=false;
 bool skipEvaluation_=false;
 bool isCutBased_=false;
 int trainingMass_=124;
-float bdtCut_=-0.44;
+float bdtCut_=-0.78;
 float mggMin_=100.;
 float mggMax_=180.;
 
@@ -105,7 +105,7 @@ void OptionParser(int argc, char *argv[]){
     ("skipTesting,t",                                                                           "Skip testing")
     ("skipEvaluation,e",                                                                        "Skip evaluation")
     ("isCutBased",                                                                              "Train cut based style")
-    ("trainingMass", po::value<int>(&trainingMass_)->default_value(124),                        "Training Mass")
+    ("trainingMass", po::value<int>(&trainingMass_)->default_value(trainingMass_),              "Training Mass")
     ("bdtMin", po::value<float>(&bdtCut_)->default_value(bdtCut_),                        "diphton BDT Cut")
     ("mggMin", po::value<float>(&mggMin_)->default_value(mggMin_),                        "Minimum for Mgg")
     ("mggMax", po::value<float>(&mggMax_)->default_value(mggMax_),                        "Maximum for Mgg")
@@ -204,7 +204,7 @@ void makeTrainingTree(TTree *tree, vector<pair<string,string> > treeNames, bool 
   TH1F *check = new TH1F("check","check",100,0,100);
   for (vector<pair<string,string> >::iterator it=treeNames.begin(); it!=treeNames.end(); it++){
     TTree *thisTree = (TTree*)input_->Get(it->first.c_str());
-    thisTree->Draw("1>>check","weight*(weight>0)","goff");
+    //thisTree->Draw("1>>check","weight*(weight>0)","goff");
     cout << Form("Using  tree %15s with entries %8d and sum of weights %4.4f",thisTree->GetName(),int(thisTree->GetEntries()),check->GetSumOfWeights()) << endl;
     check->Reset();
     thisTree->SetBranchAddress("mass",&mass);
@@ -252,8 +252,29 @@ void makeTrainingTree(TTree *tree, vector<pair<string,string> > treeNames, bool 
   delete check;
 }
 
+void fillOneDHists(TTree *tr, TH1F* h, TH2F *map){
+  h->Sumw2();
+  for (int i=0;i<h->GetNbinsX();i++){
+	h->GetXaxis()->SetBinLabel(i+1,Form("Bin %d",i+1));
+  }
+  float dmom,bdt,weight;
+  tr->SetBranchAddress("deltaMoverM",&dmom);
+  tr->SetBranchAddress("bdtoutput",&bdt);
+  tr->SetBranchAddress("weight",&weight);
+
+  for (int j=0;j<tr->GetEntries();j++){
+    tr->GetEntry(j);
+    if (bdt < bdtCut_) continue;
+    if (fabs(dmom)>sidebandWidth_) continue;
+    int bin = map->FindBin(bdt,dmom);
+    //std::cout << " Event - "<< bdt << ", " << dmom << " -> " << map->GetBinContent(bin) <<std::endl;
+    h->Fill(map->GetBinContent(bin),weight);
+  }
+ 
+}
+
 void fillTwoDHists(TTree *tr, TH2F* h){
-  
+  h->Sumw2(); 
   float dmom,bdt,weight;
   tr->SetBranchAddress("deltaMoverM",&dmom);
   tr->SetBranchAddress("bdtoutput",&bdt);
@@ -270,7 +291,7 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
  signalTree_->Print("v");
  gROOT->SetBatch(0);
  int nBins_dmom = 50;
- int nBins_bdt  = 100;
+ int nBins_bdt  = 200;
  // Step 1, make Signal and Background 2D histograms
  TH2F *hsig =new TH2F("hsig","hsig",nBins_bdt,bdtCut_,1,nBins_dmom,-1*sidebandWidth_,sidebandWidth_);
  TH2F *hbkg =new TH2F("hbkg","hbkg",nBins_bdt,bdtCut_,1,nBins_dmom,-1*sidebandWidth_,sidebandWidth_);
@@ -302,7 +323,7 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
 
  Optimizations *optimizer = new Optimizations(hsig,hbkg);
  optimizer->setMaxBins(12);
- optimizer->smoothHistograms(0.005,0.005,1);
+ optimizer->smoothHistograms(0.0016,0.005,1);
  optimizer->runOptimization();
   
  // Thats it so nw get the outputs
@@ -312,6 +333,8 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
  TGraph *optGraph = (TGraph*)optimizer->getOptimizationGraph();
  TH1F *starget_hist = (TH1F*)optimizer->getTargetS1D();
  TH1F *btarget_hist = (TH1F*)optimizer->getTargetB1D();
+
+
  int nFinalBins = optimizer->getFinalNumberOfBins();
 
  // Step 3, save output and print ranges also S/B
@@ -361,6 +384,17 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
  optGraph->Write();
  roc->Write(); 
 
+ // Finally make some S/B hists
+ TH1F *sfinal_hist = new TH1F("s_raw_final","",nFinalBins,0,1);
+ TH1F *bfinal_hist = new TH1F("b_raw_final","",nFinalBins,0,1);
+
+ fillOneDHists(signalTree_,sfinal_hist,categoryMap);
+ fillOneDHists(backgroundTree_,bfinal_hist,categoryMap);
+ sfinal_hist->SetLineColor(2);
+ bfinal_hist->SetLineColor(4);
+
+ sfinal_hist->Write();
+ bfinal_hist->Write();
 }
 
   
