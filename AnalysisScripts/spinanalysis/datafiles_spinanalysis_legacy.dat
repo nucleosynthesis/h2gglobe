@@ -1,12 +1,12 @@
-intL=19715. histfile=/store/group/phys_higgs/cmshgg/analyzed/MattLegacyTest/spinanalysis/%(label)s/CMS-HGG.root output=eventsList.txt
+intL=19715. histfile=/store/group/phys_higgs/cmshgg/analyzed/MattLegacyTest/spinanalysis/%(label)s/CMS-HGG.root output=eventsList.txt sqrtS=8
 
 #
 # Data
 #
-typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/data/Photon_Run2012A_22Jan2013-v1
-typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/data/DoublePhoton_Run2012B-22Jan2013-v1
-typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/data/DoublePhoton_Run2012C-22Jan2013-v2
-typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/data/DoublePhoton_Run2012D-22Jan2013-v1_v3
+typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v6/data/Photon_Run2012A_22Jan2013-v1
+typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v6/data/DoublePhoton_Run2012B-22Jan2013-v1
+typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v6/data/DoublePhoton_Run2012C-22Jan2013-v2
+typ=0   ind=0 draw=1   Nam=Data tot=1 red=1 lum=1.0e10   xsec=1. kfac=1.0   scal=1.   CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v6/data/DoublePhoton_Run2012D-22Jan2013-v1_v3
 
 #
 # Signal
@@ -42,8 +42,8 @@ typ=+42    ind=104 draw=1  Nam=gjet_40_8TeV_pf    CaDir=/store/group/phys_higgs/
 # qcd use pf + ff
 typ=+11   ind=92 draw=1  Nam=qcd_30_8TeV_ff CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-30to40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_ff    red=0   lum=1.e10 xsec=12208.   kfac=1.3  scal=1.
 typ=+12   ind=92 draw=1  Nam=qcd_30_8TeV_pf CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-30to40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_pf    red=0   lum=1.e10 xsec=12208.   kfac=1.3  scal=1.
-typ=+21   ind=94 draw=1  Nam=qcd_40_8TeV_ff CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_2_ff    red=0   lum=1.e10 xsec=51439.   kfac=1.3  scal=1.
-typ=+22   ind=94 draw=1  Nam=qcd_40_8TeV_pf CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_2_pf    red=0   lum=1.e10 xsec=51439.   kfac=1.3  scal=1.
+typ=+21   ind=94 draw=1  Nam=qcd_40_8TeV_ff CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_ff    red=0   lum=1.e10 xsec=51439.   kfac=1.3  scal=1.
+typ=+22   ind=94 draw=1  Nam=qcd_40_8TeV_pf CaDir=/store/group/phys_higgs/cmshgg/reduced/legacy_paper/legacy_paper_reduction_8TeV_v5/mc/Summer12_RD1/QCD_Pt-40_doubleEMEnriched_TuneZ2star_8TeV-pythia6_Summer12_DR53X-PU_RD1_START53_V7N-v1_pf    red=0   lum=1.e10 xsec=51439.   kfac=1.3  scal=1.
 
 #
 # Branches to use

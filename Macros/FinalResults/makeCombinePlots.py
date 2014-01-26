@@ -39,6 +39,7 @@ parser.add_option("","--rf",dest="rf",default=False,action="store_true",help="Do
 parser.add_option("","--mumh",dest="mumh",default=False,action="store_true",help="Do NLL mu vs mh scan plot")
 parser.add_option("","--rvrf",dest="rvrf",default=False,action="store_true",help="Do NLL rv vs rf scan plot")
 parser.add_option("","--mpdfchcomp",dest="mpdfchcomp",default=False,action="store_true",help="Do MultiPdf channel compatbility plot")
+parser.add_option("","--mpdfmaxlh",dest="mpdfmaxlh",default=False,action="store_true",help="Do MultiPdf best fit mu as a function of MH plot")
 parser.add_option("-v","--verbose",dest="verbose",default=False,action="store_true")
 parser.add_option("-b","--batch",dest="batch",default=False,action="store_true")
 (options,args)=parser.parse_args()
@@ -54,9 +55,10 @@ if options.rf: options.method='rf'
 if options.mumh: options.method='mumh'
 if options.rvrf: options.method='rvrf'
 if options.mpdfchcomp: options.method='mpdfchcomp'
+if options.mpdfmaxlh: options.method='mpdfmaxlh'
 if not options.outname: options.outname=options.method
 
-allowed_methods=['pval','limit','maxlh','mh','mu','mumh','rv','rf','rvrf','mpdfchcomp']
+allowed_methods=['pval','limit','maxlh','mh','mu','mumh','rv','rf','rvrf','mpdfchcomp','mpdfmaxlh']
 if not options.datfile and options.method not in allowed_methods:
   print 'Invalid method. Must set one of: ', allowed_methods
   sys.exit()
@@ -65,6 +67,7 @@ import ROOT as r
 outf = r.TFile('CombinePlotCanvases.root','RECREATE')
 
 if options.batch: r.gROOT.SetBatch()
+r.gStyle.SetOptStat(0)
 
 # set defaults for colors etc.
 while len(options.files)>len(options.colors): options.colors.append(1)
@@ -103,7 +106,7 @@ def pvalPlot(allVals):
     graph = r.TGraph()
     for j in range(len(values)):
       graph.SetPoint(j,values[j][0],values[j][1])
-      if options.verbose: print '\t', j, values[j][0], values[j][1], r.RooStats.PValueToSignificance(values[j][1])
+      if options.verbose or values[j][0]==125: print '\t', j, values[j][0], values[j][1], r.RooStats.PValueToSignificance(values[j][1])
     
     graph.SetLineColor(int(options.colors[k]))
     graph.SetLineStyle(int(options.styles[k]))
@@ -129,7 +132,7 @@ def pvalPlot(allVals):
   dummyHist.Draw("AXIGSAME")
 
   # draw sigma lines
-  sigmas=[1,2,3,4,5]
+  sigmas=[1,2,3,4,5,6]
   lines=[]
   labels=[]
   for i,sig in enumerate(sigmas):
@@ -151,7 +154,7 @@ def pvalPlot(allVals):
         labels[i].Draw('SAME')
 
   # draw text
-  lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
   lat.DrawLatex(0.67,0.94,options.text)
   
   # draw legend
@@ -232,7 +235,7 @@ def maxlhPlot(allVals):
   l2.Draw()
   
   # draw text
-  lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
   lat.DrawLatex(0.67,0.94,options.text)
   
   # draw legend
@@ -288,9 +291,10 @@ def limitPlot(allVals):
         twoSigma.SetPoint(point_counter,mh,median)
         twoSigma.SetPointError(point_counter,0,0,abs(median-down95),abs(up95-median))
         point_counter+=1
-        if options.verbose: print mh, median, down68, up68, down95, up95, 
-        if not options.expected: print obs
-        else: print ''
+        if options.verbose: 
+          print mh, median, down68, up68, down95, up95, 
+          if not options.expected: print obs
+          else: print ''
     
     graph.SetMarkerStyle(21)
     graph.SetMarkerSize(0.5)
@@ -347,7 +351,7 @@ def limitPlot(allVals):
   l.Draw()
 
   # draw text
-  lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
   lat.DrawLatex(0.67,0.94,options.text)
   
   # draw legend
@@ -488,9 +492,13 @@ def plot1DNLL(returnErrors=False):
     for i in range(tree.GetEntries()):
       tree.GetEntry(i)
       xv = getattr(tree,x)
-      #if tree.deltaNLL>=0:
+      #if tree.quantileExpected==1: continue
+      if tree.deltaNLL<0: continue
       if xv in [re[0] for re in res]: continue
-      else: res.append([xv,2.*tree.deltaNLL])
+      if tree.deltaNLL>100 or tree.deltaNLL<-100: continue
+      if tree.deltaNLL != tree.deltaNLL: continue
+      if xv<-1 and tree.deltaNLL==0: continue
+      res.append([xv,2.*tree.deltaNLL])
     res.sort()
     minNLL = min([re[1] for re in res])
     for re in res: 
@@ -532,7 +540,8 @@ def plot1DNLL(returnErrors=False):
     eplus2 = h2-m
     eminus2 = m-l2
 
-    print "%s : %1.4f +%1.3g -%1.3g" % ( gr.GetName(), xmin, eplus , eminus )
+    print "%15s : %4.2f +%4.2g -%4.2g" % ( options.names[k], xmin, eplus , eminus )
+    #print "%s : %1.4f +%1.3g -%1.3g (2sig) +%1.3g -%1.3g" % ( options.names[k], xmin, eplus , eminus, eplus2, eminus2 )
 
     if returnErrors:
       return [xmin,eplus,eminus,eplus2,eminus2]
@@ -568,6 +577,8 @@ def plot1DNLL(returnErrors=False):
     gr.GetXaxis().SetNdivisions(505)
     if not options.yaxis: gr.GetYaxis().SetRangeUser(0.,6)
     else: gr.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
+    #gr.SetMarkerSize(2)
+    #gr.SetMarkerStyle(r.kOpenCircle)
     gr.Draw("L")
 
   # draw legend
@@ -581,7 +592,7 @@ def plot1DNLL(returnErrors=False):
     l.Draw('same')
   
   # draw text
-  lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
   lat.DrawLatex(0.67,0.94,options.text)
 
   # draw fit value
@@ -658,7 +669,7 @@ def OBSOLETEplot1DNLLOld(returnErrors=False):
     eplus  = func.GetX(1.,xmin,func.GetXmax()) - xmin
     eminus2 = xmin - func.GetX(4.,func.GetXmin(),xmin)
     eplus2  = func.GetX(4.,xmin,func.GetXmax()) - xmin
-    print "%s : %1.4f +%1.3g -%1.3g" % ( graph.GetName(), xmin, eplus , eminus )
+    print "%s : %1.4f +%1.3g -%1.3g (2sig) +%1.3g -%1.3g" % ( graph.GetName(), xmin, eplus , eminus, eplus2, eminus2 )
 
     if returnErrors:
       return [xmin,eplus,eminus,eplus2,eminus2]
@@ -710,7 +721,7 @@ def OBSOLETEplot1DNLLOld(returnErrors=False):
     l.Draw('same')
   
   # draw text
-  lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
   lat.DrawLatex(0.67,0.94,options.text)
 
   # draw fit value
@@ -823,7 +834,7 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
   leg.Draw()
   # draw text
   if options.text:
-    lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+    lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
     lat.DrawLatex(0.67,0.94,options.text)
   
   canv.Modified()
@@ -845,7 +856,7 @@ def plot2DNLL(xvar="RF",yvar="RV",xtitle="#mu_{ggH+ttH}",ytitle="#mu_{qqH+VH}"):
   leg.Draw()
   # draw text
   if options.text:
-    lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+    lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
     lat.DrawLatex(0.67,0.94,options.text)
   canv.Modified()
   canv.Update()
@@ -871,6 +882,7 @@ def plotMPdfChComp():
     options.files = [loffiles[0]]
     options.method = 'mu'
     r.gROOT.SetBatch()
+    print '%15s'%options.names[k],
     ps = plot1DNLL(True)
     ps.insert(0,options.names[k])
     points.append(ps)
@@ -892,6 +904,9 @@ def plotMPdfChComp():
   
   rMin = rMin - 0.7*r.TMath.Abs(rMin)
   rMax = rMax + 0.5*r.TMath.Abs(rMax)
+  if options.xaxis: 
+    rMin = float(options.xaxis.split(',')[0])
+    rMax = float(options.xaxis.split(',')[1])
   if options.verbose:
     print 'ChComp PlotRange: ', rMin, '-', rMax
 
@@ -1001,7 +1016,7 @@ def plotMPdfChComp():
 
   # draw text
   if options.text:
-    lat.DrawLatex(0.12,0.92,"CMS Preliminary")
+    lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
     lat.DrawLatex(0.72,0.94,options.text)
 
   canv.Modified()
@@ -1019,6 +1034,97 @@ def plotMPdfChComp():
   canv.SetLeftMargin(cachePadLeft);
   canv.SetRightMargin(cachePadRight);
 
+def plotMPdfMaxLH():
+
+  points = []
+  loffiles = options.files
+
+  k=0
+  while len(loffiles)>0:
+    options.files = [loffiles[0]]
+    tf = r.TFile(options.files[0])
+    tree = tf.Get('limit')
+    tree.GetEntry(0)
+    mh = tree.mh
+    tf.Close()
+    options.method = 'mu'
+    r.gROOT.SetBatch()
+    ps = plot1DNLL(True)
+    ps.insert(0,mh)
+    points.append(ps)
+    k+=1
+    loffiles.pop(0)
+
+  points.sort(key=lambda x: x[0])
+
+  bestFit = r.TGraph()
+  oneSigma = r.TGraphAsymmErrors()
+  twoSigma = r.TGraphAsymmErrors()
+  
+  for p,point in enumerate(points):
+    bestFit.SetPoint(p,point[0],point[1])
+    oneSigma.SetPoint(p,point[0],point[1])
+    twoSigma.SetPoint(p,point[0],point[1])
+    oneSigma.SetPointError(p,0.,0.,point[3],point[2])
+    twoSigma.SetPointError(p,0.,0.,point[5],point[4])
+  
+  bestFit.SetLineColor(r.kBlack)
+  bestFit.SetLineWidth(3)
+  bestFit.SetLineStyle(r.kDashed)
+
+  twoSigma.SetLineColor(r.kBlack)
+  twoSigma.SetLineStyle(r.kDashed)
+  twoSigma.SetLineWidth(3)
+  twoSigma.SetFillColor(r.kGreen)
+
+  oneSigma.SetLineColor(r.kBlack)
+  oneSigma.SetLineStyle(r.kDashed)
+  oneSigma.SetLineWidth(3)
+  oneSigma.SetFillColor(r.kGreen+2)
+
+  if not options.legend: leg = r.TLegend(0.6,0.7,0.88,0.88)
+  else: leg = r.TLegend(float(options.legend.split(',')[0]),float(options.legend.split(',')[1]),float(options.legend.split(',')[2]),float(options.legend.split(',')[3]))
+  leg.SetFillColor(0)
+  leg.AddEntry(bestFit,"Best Fit","L")
+  leg.AddEntry(oneSigma,"#pm 1 #sigma","FL")
+  leg.AddEntry(twoSigma,"#pm 2 #sigma","FL")
+
+  dummyHist.SetStats(0)
+  dummyHist.GetYaxis().SetTitle("#sigma/#sigma_{SM}")
+
+  dummyHist.GetYaxis().SetRangeUser(twoSigma.GetMinimum(),twoSigma.GetMaximum())
+
+  if options.xaxis: dummyHist.GetXaxis().SetRangeUser(float(options.xaxis.split(',')[0]),float(options.xaxis.split(',')[1]))
+  if options.yaxis: dummyHist.GetYaxis().SetRangeUser(float(options.yaxis.split(',')[0]),float(options.yaxis.split(',')[1]))
+
+  dummyHist.Draw("AXISG")
+  twoSigma.Draw("LE3same")
+  oneSigma.Draw("LE3same")
+  line = r.TLine(110,1.,150,1.)
+  line.SetLineColor(r.kRed)
+  line.SetLineWidth(3)
+  line.Draw("same")
+  bestFit.Draw("Lsame")
+
+  # draw text
+  lat.DrawLatex(0.12,0.92,"CMS VERY Preliminary")
+  lat.DrawLatex(0.67,0.94,options.text)
+  
+  # draw legend
+  leg.Draw()
+  canv.SetGrid()
+  canv.RedrawAxis()
+
+  # print canvas
+  canv.Update()
+  if not options.batch: raw_input("Looks ok?")
+  canv.Print('%s.pdf'%options.outname)
+  canv.Print('%s.png'%options.outname)
+  canv.Print('%s.C'%options.outname)
+  canv.SetName(options.outname)
+  outf.cd()
+  canv.Write()
+
 def run():
   if options.verbose:
     print options.method
@@ -1030,7 +1136,7 @@ def run():
 
   if options.method=='pval' or options.method=='limit' or options.method=='maxlh':
     runStandard()
-  elif options.method=='mh' or options.method=='mu' or options.method=='rv' or options.method=='rf' or options.method=='mpdfchcomp':
+  elif options.method=='mh' or options.method=='mu' or options.method=='rv' or options.method=='rf' or options.method=='mpdfchcomp' or options.method=='mpdfmaxlh':
     path = os.path.expandvars('$CMSSW_BASE/src/HiggsAnalysis/HiggsTo2photons/h2gglobe/Macros/FinalResults/rootPalette.C')
     if not os.path.exists(path):
       sys.exit('ERROR - Can\'t find path: '+path) 
@@ -1041,6 +1147,8 @@ def run():
     r.gROOT.LoadMacro(path)
     if options.method=='mpdfchcomp':
       plotMPdfChComp()
+    elif options.method=='mpdfmaxlh':
+      plotMPdfMaxLH()
     else:
       plot1DNLL()
   elif options.method=='mumh':
