@@ -1,4 +1,5 @@
 import os,numpy,sys,math,array
+import datetime
 from optparse import OptionParser
 
 
@@ -106,6 +107,7 @@ else:
 
 # PLOT OPS ----------------
 sigscale   = 1.
+sysmass=125.0  # Always use the systematics calculated at 125 GeV 
 # THEORY SYSTEMATICS ------
 lumi          = "1.022" if options.is2011 else "1.025"
 PDF_ggH       = "0.931/1.075"
@@ -116,21 +118,24 @@ QCDscale_ggH  = "0.922/1.072"
 QCDscale_qqH  = "0.998/1.002"
 QCDscale_VH   = "0.982/1.021"
 QCDscale_ttH  = "0.907/1.038"
-
-# SHAPE SYSTEMATICS -------
+br_hgg 	      = "0.951/1.050" 
+# SHAPE SYSTEMATICS ------- put in [name,nsigmavariation]
 systematics = [
-	       "E_res"
-	      ,"E_scale"
-	      ,"idEff"
+	       ["E_res",3]
+	      ,["E_scale",3]
+	      ,["idEff",3]
 	      #,"r9Eff"
-	      ,"phoIdMva"
-	      ,"regSig"
+	      ,["phoIdMva",3]
+	      ,["regSig",3]
 	      #,"kFactor"
-	      ,"triggerEff"
-	      #,"pdfWeight"
-	      ,"vtxEff"
+	      ,["triggerEff",3]
+	      ,["vtxEff",3]
+	      ,["pdfWeight_QCDscale_ggH",1]
+	      ,["pdfWeight_QCDscale_qqH",1]
 	      ]
-if options.is2011: systematics.append("kFactor")
+for i in range(1,27): systematics.append(["pdfWeight_pdfset%d"%i,1])
+
+#if options.is2011: systematics.append("kFactor")
 
 # ADDITIONAL EXLUSIVE TAG SYSTEMATICS --
 
@@ -295,8 +300,12 @@ def plotDistributions(mass,data,signals,bkg,errors):
 
 	for b in range(1,nbins+1):
 		additional = errors[b-1]
+		#if fNew.GetBinError(b)/fNew.GetBinContent(b) < 0.0001 : 
+		#	fNew.SetBinError(b,50.*additional)
+		#	fNew2.SetBinError(b,50.*additional)
   		fNew.SetBinError(b,((fNew.GetBinError(b)**2)+((fNew.GetBinContent(b)*additional)**2))**0.5)
   		fNew2.SetBinError(b,2*(((fNew2.GetBinError(b)**2)+((fNew2.GetBinContent(b)*additional)**2))**0.5))
+		print "Error, bin ",b,fNew.GetBinError(b)
 	c = ROOT.TCanvas();c.SetLogy()
 	if (not options.includeVBF): flatdata.GetXaxis().SetTitle("Category")
 	flatdata.GetYaxis().SetRangeUser(0.1,1e4)
@@ -372,19 +381,9 @@ def plotDistributions(mass,data,signals,bkg,errors):
 	d.SaveAs(plotOutDir+"/pdf/diff_model_m%3.1f.pdf"%mass);d.SaveAs(plotOutDir+"/macro/diff_model_m%3.1f.C"%mass);d.SaveAs(plotOutDir+"/png/diff_model_m%3.1f.png"%mass)
 	
 
-
-#def getBinningMass(mass):
-
-#	if mass >= 115.0 and mass <= 117.0: return "115"
-#	if mass >= 117.5 and mass <= 122.0: return "120"
-#	if mass >= 122.5 and mass <= 127.0: return "125"
-#	if mass >= 127.5 and mass <= 132.0: return "130"
-#	if mass >= 132.5 and mass <= 137.0: return "135"
-#	if mass >= 137.5 and mass <= 144.5: return "140"
-#	if mass >= 145.0 and mass <= 150.0: return "150"
-
 def py_quadInterpolate(C,X1,X2,X3,Y1,Y2,Y3):
 	if abs(Y1) <0.00001 or abs(Y1) <0.00001 :return " - " 
+	if abs(Y1-Y2) < 0.00001 or abs(Y3-Y2) < 0.00001: return " - " 
 	resL = quadInterpolate(-1*C,X1,X2,X3,Y1,Y2,Y3)
 	resH = quadInterpolate(C,X1,X2,X3,Y1,Y2,Y3)
 	if math.isnan(resL) or math.isinf(resL) or  math.isnan(resH) or math.isinf(resL): return " - "
@@ -395,7 +394,7 @@ def py_quadInterpolate(C,X1,X2,X3,Y1,Y2,Y3):
 def getBinContent(hist,b):
   
 	res = hist.GetBinContent(b)
-	if res==0: return 0.0001
+	if res<=0: return 0.0001
 	else: return res
 
 def getPoissonBinContent(hist,b,exp):
@@ -437,6 +436,8 @@ def writeCard(tfile,mass,scaleErr):
   # Write the basics
   outPut.write("Mva Binned Analysis DataCard (mH=%3.1f) \n"%mass)
   outPut.write("DataCard extracted from %s \n"%tfile.GetName())
+  stime = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+  outPut.write("At  %s \n"%st)
   outPut.write("--------------------------------------------------------------\n")
   outPut.write("imax *\n")
   outPut.write("jmax *\n")
@@ -458,7 +459,13 @@ def writeCard(tfile,mass,scaleErr):
   backgroundContents = []
   if options.Bias:
 	print "Using Bkg Model Corrected for mass bias"
-	backgroundContents = [bkgHistCorr.GetBinContent(b) for b in range(1,nBins+1)]
+	backgroundContents = []
+	for b in  range(1,nBins+1):
+	  bval =  bkgHistCorr.GetBinContent(b)
+	  if bval <=0 : 
+		bkgHistCorr.SetBinContent(b,0.0001)
+		backgroundContents.append(0.0001)
+	  else: backgroundContents.append(bval)
   else: sys.exit("Simple Background model no longer available !!!! ")
 
   if options.throwToy or options.throwGlobalToy or options.throwAsimov:
@@ -514,13 +521,13 @@ def writeCard(tfile,mass,scaleErr):
         bias = quadInterpolate(1.,-1.,0.,1.,bkgCont-berr,bkgCont,bkgCont+berr)
         randBkg = randBkg*(bias**(1+g_r.Gaus()))
       
-      outPut.write(" %.3f   %.3f   %.3f   %.3f   %.3f "\
+      outPut.write(" %.7f   %.7f   %.7f   %.7f   %.7f "\
       %(getBinContent(gghHist,b),getBinContent(vbfHist,b),getBinContent(wzhHist,b),getBinContent(tthHist,b)\
        ,randBkg))
     outPut.write("\n--------------------------------------------------------------\n")
 
   else:
-    for b in range(binL,binH): outPut.write(" %.3f   %.3f   %.3f   %.3f   %.3f "\
+    for b in range(binL,binH): outPut.write(" %.7f   %.7f   %.7f   %.7f   %.7f "\
       %(getBinContent(gghHist,b),getBinContent(vbfHist,b),getBinContent(wzhHist,b),getBinContent(tthHist,b)\
        ,backgroundContents[b-1]))
     outPut.write("\n--------------------------------------------------------------\n")
@@ -548,6 +555,8 @@ def writeCard(tfile,mass,scaleErr):
     for b in range(binL,binH): outPut.write(" -   -   %s  -   -  "%(PDF_VH))
     outPut.write("\nPDF_ttH  lnN ")
     for b in range(binL,binH): outPut.write(" -   -   -   %s  -  "%(PDF_ttH))
+    outPut.write("\nbr_hgg  lnN ")
+    for b in range(binL,binH): outPut.write(" %s   %s   %s   %s  -  "%(br_hgg,br_hgg,br_hgg,br_hgg))
 
   outPut.write("\n")
 
@@ -733,19 +742,58 @@ def writeCard(tfile,mass,scaleErr):
   
   if options.signalSys:
    print "Writing Systematics Part (could be slow)"
-   for sys in systematics:
+   gghHistS  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f"%sysmass)
+   vbfHistS  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f"%sysmass)
+   wzhHistS  = tfile.Get("th1f_sig_"+runtype+"_wzh_%3.1f"%sysmass)
+   tthHistS  = tfile.Get("th1f_sig_"+runtype+"_tth_%3.1f"%sysmass)
 
-    gghHistU  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f_%sUp01_sigma"%(mass,sys))
-    vbfHistU  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f_%sUp01_sigma"%(mass,sys))
-    wzhHistU  = tfile.Get("th1f_sig_"+runtype+"_wzh_%3.1f_%sUp01_sigma"%(mass,sys))
-    tthHistU  = tfile.Get("th1f_sig_"+runtype+"_tth_%3.1f_%sUp01_sigma"%(mass,sys))
-    gghHistD  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f_%sDown01_sigma"%(mass,sys))
-    vbfHistD  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f_%sDown01_sigma"%(mass,sys))
-    wzhHistD  = tfile.Get("th1f_sig_"+runtype+"_wzh_%3.1f_%sDown01_sigma"%(mass,sys))
-    tthHistD  = tfile.Get("th1f_sig_"+runtype+"_tth_%3.1f_%sDown01_sigma"%(mass,sys))
-    
+   for syst in systematics:
+    sys = syst[0]
+    sigma = syst[1]
+
+    if sys=="pdfWeight_QCDscale_ggH": # Only effect ggH
+	sysn="pdfWeight_QCDscale"
+   	gghHistS  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f_central"%sysmass)
+
+    elif sys=="pdfWeight_QCDscale_qqH":	# Only effect qqH
+	sysn="pdfWeight_QCDscale"
+   	vbfHistS  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f_central"%sysmass)
+
+    else: sysn=sys
+    # mname in histogram is always 01 sigma(historically)
+    gghHistU  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f_%sUp01_sigma"%(sysmass,sysn))
+    vbfHistU  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f_%sUp01_sigma"%(sysmass,sysn))
+    wzhHistU  = tfile.Get("th1f_sig_"+runtype+"_wzh_%3.1f_%sUp01_sigma"%(sysmass,sysn))
+    tthHistU  = tfile.Get("th1f_sig_"+runtype+"_tth_%3.1f_%sUp01_sigma"%(sysmass,sysn))
+    gghHistD  = tfile.Get("th1f_sig_"+runtype+"_ggh_%3.1f_%sDown01_sigma"%(sysmass,sysn))
+    vbfHistD  = tfile.Get("th1f_sig_"+runtype+"_vbf_%3.1f_%sDown01_sigma"%(sysmass,sysn))
+    wzhHistD  = tfile.Get("th1f_sig_"+runtype+"_wzh_%3.1f_%sDown01_sigma"%(sysmass,sysn))
+    tthHistD  = tfile.Get("th1f_sig_"+runtype+"_tth_%3.1f_%sDown01_sigma"%(sysmass,sysn))
+   
     #print gghHistU.GetName(), vbfHistU.GetName(), wzhHistU.GetName(), tthHistU.GetName() 
     #print gghHistD.GetName(), vbfHistD.GetName(), wzhHistD.GetName(), tthHistD.GetName() 
+
+    if sys=="pdfWeight_QCDscale_ggH": # Only effect ggH
+	vbfHistU=vbfHistS.Clone()
+	vbfHistD=vbfHistS.Clone()
+	wzhHistU=wzhHistS.Clone()
+	wzhHistD=wzhHistS.Clone()
+	tthHistU=tthHistS.Clone()
+	tthHistD=tthHistS.Clone()
+    
+    if sys=="pdfWeight_QCDscale_qqH":	# Only effect qqH
+	gghHistU=gghHistS.Clone()
+	gghHistD=gghHistS.Clone()
+	wzhHistU=wzhHistS.Clone()
+	wzhHistD=wzhHistS.Clone()
+	tthHistU=tthHistS.Clone()
+	tthHistD=tthHistS.Clone()
+	
+    if "pdfWeight_pdfset" in sys:
+	wzhHistU=wzhHistS.Clone()
+	wzhHistD=wzhHistS.Clone()
+	tthHistU=tthHistS.Clone()
+	tthHistD=tthHistS.Clone()
 
     if options.signalyieldsweight > 0:
       gghHistU.Scale(signalyieldsweight)
@@ -757,30 +805,34 @@ def writeCard(tfile,mass,scaleErr):
       wzhHistD.Scale(signalyieldsweight)
       tthHistD.Scale(signalyieldsweight)
 
+	
     if options.is2011 and sys=="vtxEff":
     	outPut.write("\n%s_7TeV lnN "%sys)
     else: outPut.write("\n%s lnN "%sys)
 
     for b in range(binL,binH):
-	 outPut.write(" %s %s %s %s - "%(\
-				     py_quadInterpolate(1.,-3.,0.,3.,gghHistD.GetBinContent(b)  \
-				        			  ,gghHist.GetBinContent(b)  \
+	 if b>gghHistU.GetNbinsX() : 	
+	   outPut.write(" - - - - - ")
+	 else:
+	   outPut.write(" %s %s %s %s - "%(\
+				     py_quadInterpolate(1.,-1*sigma,0.,sigma,gghHistD.GetBinContent(b)  \
+				        			  ,gghHistS.GetBinContent(b)  \
                                         			  ,gghHistU.GetBinContent(b)) \
-				    ,py_quadInterpolate(1.,-3.,0.,3.,vbfHistD.GetBinContent(b)  \
-				        			  ,vbfHist.GetBinContent(b)  \
+				    ,py_quadInterpolate(1.,-1*sigma,0.,sigma,vbfHistD.GetBinContent(b)  \
+				        			  ,vbfHistS.GetBinContent(b)  \
                                         			  ,vbfHistU.GetBinContent(b)) \
-				    ,py_quadInterpolate(1.,-3.,0.,3.,wzhHistD.GetBinContent(b)  \
-				        			  ,wzhHist.GetBinContent(b)  \
+				    ,py_quadInterpolate(1.,-1*sigma,0.,sigma,wzhHistD.GetBinContent(b)  \
+				        			  ,wzhHistS.GetBinContent(b)  \
                                         			  ,wzhHistU.GetBinContent(b)) \
-				    ,py_quadInterpolate(1.,-3.,0.,3.,tthHistD.GetBinContent(b)  \
-				        			  ,tthHist.GetBinContent(b)  \
+				    ,py_quadInterpolate(1.,-1*sigma,0.,sigma,tthHistD.GetBinContent(b)  \
+				        			  ,tthHistS.GetBinContent(b)  \
                                         			  ,tthHistU.GetBinContent(b)) \
  				    ))
   outPut.write("\n")
   # Finally the background errors, these are realtively simple
   if options.is2011: outPut.write("\nbkg_norm lnN ")
   else: outPut.write("\nbkg_norm_8TeV lnN ")
-  for b in range(binL,binH): outPut.write(" -   -   -   -  %.5f "%(scaleErr))
+  for b in range(binL,binH): outPut.write(" -   -   -   -  %.5f/%.5f "%(1-(scaleErr-1),scaleErr))
 
   ## now for the David errors
   if options.Bias:
@@ -807,7 +859,7 @@ def writeCard(tfile,mass,scaleErr):
         if options.is2011: outPut.write("\nbkg_stat%d gmN %d "%(b,int(backgroundContents[b-1]/bkgScale)))
         else: outPut.write("\nbkg_stat%d_8TeV gmN %d "%(b,int(backgroundContents[b-1]/bkgScale)))
 	for q in range(binL,binH):
-		if q==b: outPut.write(" - - - - %.3f "%bkgScale)
+		if q==b: outPut.write(" - - - - %.5f "%bkgScale)
 		else:    outPut.write(" - - - - - ")
 
   # Finally make a plot of what will go into the limit
@@ -864,11 +916,14 @@ genMasses     = [110,115,120,125,130,135,140,145,150]
 if options.is2011:
   #scalingErrors = [1.01072,1.01097,1.01061,1.01019,1.01234,1.01306,1.01519,1.01554,1.01412] # P.Dauncey 100-180, 2% window, MIT presel + BDT > 0.05 , Jan16 ReReco 15Apr (Pow2 Fit)
   # Preapproval numbers 
-  scalingErrors= [ 1.00694, 1.00596, 1.00866, 1.00713, 1.01120, 1.00796, 1.00748, 1.00886, 1.00939]
+  #scalingErrors= [ 1.00694, 1.00596, 1.00866, 1.00713, 1.01120, 1.00796, 1.00748, 1.00886, 1.00939] -> 2 pow law
+  scalingErrors= [1.00757,1.00749,1.00727,1.00647,1.00704,1.00726,1.00791,1.00911,1.00962] # 1 power law
+
 #Legacy 8TeV Freeze numbers
 else:
   #scalingErrors = [1.00486, 1.00468, 1.00464, 1.00489, 1.00535, 1.00545, 1.00550, 1.00579, 1.00609]
-  scalingErrors = [1.00321,1.00400,1.00500,1.00552,1.00573,1.00535,1.00456,1.00408,1.00428]
+#  scalingErrors = [1.00321,1.00400,1.00500,1.00552,1.00573,1.00535,1.00456,1.00408,1.00428] # -> double power Law
+  scalingErrors = [1.00314,1.00323,1.00350,1.00371,1.00388,1.00380,1.00356,1.00370,1.00414] # -> 2-Laurent series
 
 #evalMasses    = numpy.arange(110,150.5,0.5)
 evalMasses    = numpy.arange(options.mhLow,options.mhHigh+options.mhStep,options.mhStep)
