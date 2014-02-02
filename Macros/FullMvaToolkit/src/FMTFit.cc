@@ -25,11 +25,11 @@ FMTFit::FMTFit(TFile *tFile, TFile *outFile):
 	outfilename_(outFile->GetName())
 {
   gROOT->SetStyle("Plain");
-  r1 = new RooRealVar("r1","r1",-0.02,-10.,0.); 
-  r2 = new RooRealVar("r2","r2",-0.02,-10.,0.); 
-  r3 = new RooRealVar("r3","r3",-1.,-20.,0.); 
-  f1 = new RooRealVar("f1","f1",0.5,0.01,1.); 
-  f2 = new RooRealVar("f2","f2",0.001,0.001,0.49); 
+  //r1 = new RooRealVar("r1","r1",-0.02,-10.,0.); 
+  //r2 = new RooRealVar("r2","r2",-0.02,-10.,0.); 
+  //r3 = new RooRealVar("r3","r3",-1.,-20.,0.); 
+  //f1 = new RooRealVar("f1","f1",0.5,0.01,1.); 
+  //f2 = new RooRealVar("f2","f2",0.001,0.001,0.49); 
   nBkgInSigReg = new RooRealVar("nbis","nbis",10,0,100000);
 	inWS = (RooWorkspace*)tFile->Get("cms_hgg_workspace");
 	outWS = new RooWorkspace("cms_hgg_workspace");
@@ -38,7 +38,17 @@ FMTFit::FMTFit(TFile *tFile, TFile *outFile):
   //RooExponential *e1 = new RooExponential("e1","e1",*mass_var,*r1);
   //RooExponential *e2 = new RooExponential("e2","e2",*mass_var,*r2);
   //fit = new RooAddPdf("data_exp_model","data_exp_model",*e1,*e2,*f1);
-  fit = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Power(@0,@2)+(1.-@1)*TMath::Power(@0,@3)",RooArgList(*mass_var,*f1,*r1,*r2));
+  //if (is2011){	// Single power law for 2011???
+    r1 = new RooRealVar("r1","r1",-0.02,-10.,0.); 
+    r2 = new RooRealVar("r2","r2",-0.02,-10.,0.); 
+    r3 = new RooRealVar("r3","r3",-1.,-20.,0.); 
+    f1 = new RooRealVar("f1","f1",0.3,0.001,1.); 
+    f2 = new RooRealVar("f2","f2",0.01,0.001,0.49); 
+    //fit = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Pow(@0,@2)+(1.-@1)*TMath::Pow(@0,@3)",RooArgList(*mass_var,*f1,*r1,*r2));
+    fit2011 = new RooGenericPdf("data_pow_model","data_pow_model","TMath::Power(@0,@1)",RooArgList(*mass_var,*r1));
+  // 2 Laurent series for 2012
+    fit2012 = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Power(@0,-4.)+(1.-@1)*TMath::Power(@0,-5.)",RooArgList(*mass_var,*f1));
+  
 
 	// get data and combine all cats
 	cout << "Looking for datasets....." << endl;
@@ -70,11 +80,6 @@ FMTFit::FMTFit(TFile *tFile, TFile *outFile, double intLumi, bool is2011, int mH
 	outfilename_(outFile->GetName())
 {
   gROOT->SetStyle("Plain");
-  r1 = new RooRealVar("r1","r1",-0.02,-10.,0.); 
-  r2 = new RooRealVar("r2","r2",-0.02,-10.,0.); 
-  r3 = new RooRealVar("r3","r3",-1.,-20.,0.); 
-  f1 = new RooRealVar("f1","f1",0.5,0.01,1.); 
-  f2 = new RooRealVar("f2","f2",0.001,0.001,0.49); 
   nBkgInSigReg = new RooRealVar("nbis","nbis",10,0,100000);
 	inWS = (RooWorkspace*)tFile->Get("cms_hgg_workspace");
 	outWS = new RooWorkspace("cms_hgg_workspace");
@@ -83,8 +88,6 @@ FMTFit::FMTFit(TFile *tFile, TFile *outFile, double intLumi, bool is2011, int mH
   //RooExponential *e1 = new RooExponential("e1","e1",*mass_var,*r1);
   //RooExponential *e2 = new RooExponential("e2","e2",*mass_var,*r2);
   //fit = new RooAddPdf("data_exp_model","data_exp_model",*e1,*e2,*f1);
-  fit = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Pow(@0,@2)+(1.-@1)*TMath::Pow(@0,@3)",RooArgList(*mass_var,*f1,*r1,*r2));
-
 	// get data and combine all cats
 	cout << "Looking for datasets....." << endl;
 	/*
@@ -95,6 +98,15 @@ FMTFit::FMTFit(TFile *tFile, TFile *outFile, double intLumi, bool is2011, int mH
 		if (cat>0) data->append(*((RooDataSet*)inWS->data(Form("data_mass_cat%d",cat))));
 	}
   */
+    r1 = new RooRealVar("r1","r1",-0.02,-10.,0.); 
+    r2 = new RooRealVar("r2","r2",-0.02,-10.,0.); 
+    r3 = new RooRealVar("r3","r3",-1.,-20.,0.); 
+    f1 = new RooRealVar("f1","f1",0.4,0.001,1.); 
+    f2 = new RooRealVar("f2","f2",0.001,0.001,0.49); 
+    //fit = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Pow(@0,@2)+(1.-@1)*TMath::Pow(@0,@3)",RooArgList(*mass_var,*f1,*r1,*r2));
+    fit2011 = new RooGenericPdf("data_pow_model","data_pow_model","TMath::Power(@0,@1)",RooArgList(*mass_var,*r1));
+    fit2012 = new RooGenericPdf("data_pow_model","data_pow_model","@1*TMath::Power(@0,-4.)+(1.-@1)*TMath::Power(@0,-5.)",RooArgList(*mass_var,*f1));
+
   data = (RooDataSet*)inWS->data("data_mass");
 	if (!outWS->data("data_mass")) outWS->import(*data);
  
@@ -144,12 +156,16 @@ pair<double,double> FMTFit::FitPow(double mass){
 
   	return pair<double,double>(normGraph->Eval(mass),0);
   }
+  //fitRes = fit->fitTo(*data,Save(true));
+  if (is2011_) fit=fit2011;
+  else fit=fit2012;
+
 	// set up fit function
 	r1->SetName(Form("r1_%3.1f",mass));
-  r2->SetName(Form("r2_%3.1f",mass));
-  r3->SetName(Form("r3_%3.1f",mass));
-  f1->SetName(Form("f1_%3.1f",mass));
-  f2->SetName(Form("f2_%3.1f",mass));
+       r2->SetName(Form("r2_%3.1f",mass));
+       r3->SetName(Form("r3_%3.1f",mass));
+      f1->SetName(Form("f1_%3.1f",mass));
+      f2->SetName(Form("f2_%3.1f",mass));
 	fit->SetName(Form("data_exp_model_%3.1f",mass));
 
 	// set up fit region
@@ -165,7 +181,6 @@ pair<double,double> FMTFit::FitPow(double mass){
 	data->Print();
 	cout << data->GetName() << " " << data->numEntries() << endl;
 	
-  //fitRes = fit->fitTo(*data,Save(true));
   fitRes = fit->fitTo(*data,Range(Form("rangeLow_m%3.1f,rangeHig_m%3.1f",mass,mass)),Save(true),PrintEvalErrors(-1));
 
 	// make plot
