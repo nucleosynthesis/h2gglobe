@@ -404,17 +404,18 @@ void FMTPlots::plotAll(double mh){
   vector<pair<TH1F*,TH1F*> > sigSyst;
   vector<string> theSystematics = getsystematics();
   for (vector<string>::iterator syst = theSystematics.begin(); syst != theSystematics.end(); syst++){
-    TH1F *up = (TH1F*)((TH1F*)tFile->Get(Form("th1f_sig_grad_ggh_%3.1f_%sUp01_sigma",mh,syst->c_str())))->Clone();
-    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_vbf_%3.1f_%sUp01_sigma",mh,syst->c_str())));
-    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_wzh_%3.1f_%sUp01_sigma",mh,syst->c_str())));
-    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_tth_%3.1f_%sUp01_sigma",mh,syst->c_str())));
-    up->SetName(Form("th1f_sig_grad_%3.1f_%sUp01_sigma",mh,syst->c_str()));
+    double systmass = 125.0;
+    TH1F *up = (TH1F*)((TH1F*)tFile->Get(Form("th1f_sig_grad_ggh_%3.1f_%sUp01_sigma",systmass,syst->c_str())))->Clone();
+    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_vbf_%3.1f_%sUp01_sigma",systmass,syst->c_str())));
+    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_wzh_%3.1f_%sUp01_sigma",systmass,syst->c_str())));
+    up->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_tth_%3.1f_%sUp01_sigma",systmass,syst->c_str())));
+    up->SetName(Form("th1f_sig_grad_%3.1f_%sUp01_sigma",systmass,syst->c_str()));
     write(tFile,up);
-    TH1F *down = (TH1F*)((TH1F*)tFile->Get(Form("th1f_sig_grad_ggh_%3.1f_%sUp01_sigma",mh,syst->c_str())))->Clone();
-    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_vbf_%3.1f_%sDown01_sigma",mh,syst->c_str())));
-    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_wzh_%3.1f_%sDown01_sigma",mh,syst->c_str())));
-    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_tth_%3.1f_%sDown01_sigma",mh,syst->c_str())));
-    down->SetName(Form("th1f_sig_grad_%3.1f_%sDown01_sigma",mh,syst->c_str()));
+    TH1F *down = (TH1F*)((TH1F*)tFile->Get(Form("th1f_sig_grad_ggh_%3.1f_%sUp01_sigma",systmass,syst->c_str())))->Clone();
+    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_vbf_%3.1f_%sDown01_sigma",systmass,syst->c_str())));
+    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_wzh_%3.1f_%sDown01_sigma",systmass,syst->c_str())));
+    down->Add((TH1F*)tFile->Get(Form("th1f_sig_grad_tth_%3.1f_%sDown01_sigma",systmass,syst->c_str())));
+    down->SetName(Form("th1f_sig_grad_%3.1f_%sDown01_sigma",systmass,syst->c_str()));
     write(tFile,down);
     sigSyst.push_back(pair<TH1F*,TH1F*>(up,down));
   }

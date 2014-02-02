@@ -357,7 +357,12 @@ void FMTSetup::ReadRunConfig(FMTBase *base){
     if (sline.find("doPhotonMvaIdSyst=")!=string::npos)           if (getOptFromConfig<bool>(sline)) base->setsystematic("phoIdMva"); 
     if (sline.find("doR9Syst=")!=string::npos)                    if (getOptFromConfig<bool>(sline)) base->setsystematic("r9Eff"); 
     if (sline.find("doKFactorSyst=")!=string::npos)               if (getOptFromConfig<bool>(sline)) base->setsystematic("kFactor");
-    if (sline.find("doPdfWeightSyst=")!=string::npos)             if (getOptFromConfig<bool>(sline)) base->setsystematic("pdfWeight");
+    if (sline.find("doPdfWeightSyst=")!=string::npos)             if (getOptFromConfig<bool>(sline)) { // eigenvector set and scale (need to uncorrelate scales later in card
+	base->setsystematic("pdfWeight_QCDscale");
+        for (int pdf_i=1;pdf_i<=26;pdf_i++){
+	  base->setsystematic(Form("pdfWeight_pdfset%d",pdf_i));
+	}
+    }
 
     if (sline.find("rederiveOptimizedBinEdges=")!=string::npos)   base->setrederiveOptimizedBinEdges(getOptFromConfig<bool>(sline));
     

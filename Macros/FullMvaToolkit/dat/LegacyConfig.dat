@@ -73,4 +73,4 @@ doPhotonIdEffSyst=1
 doVtxEffSyst=1
 doTriggerEffSyst=1
 doPhotonMvaIdSyst=1
-#doPdfWeight=1
+doPdfWeightSyst=0 # Do this JUST BEFORE making datacards, not while making trees

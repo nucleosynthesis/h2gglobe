@@ -206,6 +206,7 @@ map<string,TTree*> FMTTree::getSignalTrees(string option){
   return result;
 }
 
+
 map<string,TTree*> FMTTree::getDataTrees(){
   map<string,TTree*> result;
 	addTreeToMap(result,Form("%s/Data",dirname_.c_str()));//,"data");
@@ -255,6 +256,7 @@ void FMTTree::setBranchVariables(TTree *tree){
   tree->SetBranchAddress("weight",&weight_);
   tree->SetBranchAddress("category",&category_);
   vector<string> systs = getsystematics();
+
   for (unsigned int s=0; s<systs.size(); s++){
     tree->SetBranchAddress(Form("mass_%s_Down",systs[s].c_str()),&(massSyst_[s].first));
     tree->SetBranchAddress(Form("mass_%s_Up",systs[s].c_str()),&(massSyst_[s].second));
@@ -348,6 +350,7 @@ void FMTTree::FillSigHist(string proc, double mh){
 }
 
 void FMTTree::FillSystHist(string proc, double mh){
+	if ( fabs(mh-125.0)>0.01 ) return;
 	double cutLow = (1.-sidebandWidth_)*mh;
 	double cutHigh = (1.+sidebandWidth_)*mh;
 	
@@ -370,9 +373,13 @@ void FMTTree::FillSystHist(string proc, double mh){
         else val = tmvaGetVal((mass-mh)/mh,bdtoutputSyst_[s].second);
 				weight = weightSyst_[s].second;
 			}
-      if (cat<0) return;
+        if (cat<0) continue;
 			if (mass>=cutLow && mass<=cutHigh ) {
-			  	if (cat==0 && bdtoutput_>diphotonBdtCut_){
+			  	if (cat==0){
+				 if (bdtoutput_>diphotonBdtCut_){// apply cut to inclusive catgories only
+				  th1fs_[Form("th1f_sig_BDT_grad_%s_%5.1f_cat%d_%s%s01_sigma",proc.c_str(),mh,cat,systematics_[s].c_str(),shift[t].c_str())]->Fill(val,weight);
+				 }
+				} else { 
 				  th1fs_[Form("th1f_sig_BDT_grad_%s_%5.1f_cat%d_%s%s01_sigma",proc.c_str(),mh,cat,systematics_[s].c_str(),shift[t].c_str())]->Fill(val,weight);
 				}
 			}
@@ -404,6 +411,7 @@ void FMTTree::FillMassDatasets(){
 
 void FMTTree::doCrossCheck(vector<pair<int,map<string,TTree*> > > allTrees, int mH){
 	
+	if ( fabs(mH-125.0)>0.01 ) return;
 	TH1F *sig = new TH1F("sig125","sig125",100,-1,1);
 	TH1F *bkg = new TH1F("bkg","bkg",100,-1,1);
 	TH1F *data = new TH1F("data","data",100,-1,1);
@@ -502,7 +510,6 @@ void FMTTree::run(string option){
   if (option=="data" || option=="all") allTrees.push_back(pair<int,map<string,TTree*> >(0,dataTrees));
   if (option=="bkg" || option=="all") allTrees.push_back(pair<int,map<string,TTree*> >(1,bkgTrees));
   if (option=="ggh" || option=="vbf" || option=="wzh" || option=="tth" || option=="all") allTrees.push_back(pair<int,map<string,TTree*> >(-1,sigTrees));
-  
   
 
 	printTrees(allTrees);

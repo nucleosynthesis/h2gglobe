@@ -39,7 +39,7 @@ bool skipTraining_=false;
 bool skipTesting_=false;
 bool skipEvaluation_=false;
 bool isCutBased_=false;
-int trainingMass_=124;
+int trainingMass_=125;
 float bdtCut_=-0.78;
 float mggMin_=100.;
 float mggMax_=180.;
@@ -165,15 +165,24 @@ vector<pair<string,string> > getBackgroundTreeNames(){
   //treeNames.push_back(pair<string,string>("full_mva_trees/diphojet_8TeV","background"));
   //treeNames.push_back(pair<string,string>("full_mva_trees/dipho_Box_25_8TeV","background"));
   //treeNames.push_back(pair<string,string>("full_mva_trees/dipho_Box_250_8TeV","background"));
+  //treeNames.push_back(pair<string,string>("full_mva_trees/diphojet_8TeV","background"));
+
+  // 7TeV
+  /*
+  treeNames.push_back(pair<string,string>("full_mva_trees/dipho_Box_25_7TeV","background"));
+  //treeNames.push_back(pair<string,string>("full_mva_trees/dipho_Box_250_7TeV","background"));
+
+  treeNames.push_back(pair<string,string>("full_mva_trees/diphojet_7TeV","background"));
+  treeNames.push_back(pair<string,string>("full_mva_trees/gjet_20_7TeV_pf","background"));
+  */
+  // These for 8 TeV 
   treeNames.push_back(pair<string,string>("full_mva_trees/diphojet_sherpa_8TeV","background"));
   treeNames.push_back(pair<string,string>("full_mva_trees/gjet_20_8TeV_pf","background"));
   treeNames.push_back(pair<string,string>("full_mva_trees/gjet_40_8TeV_pf","background"));
-/*
-  treeNames.push_back(pair<string,string>("full_mva_trees/qcd_30_8TeV_pf","background"));
-  treeNames.push_back(pair<string,string>("full_mva_trees/qcd_30_8TeV_ff","background"));
-  treeNames.push_back(pair<string,string>("full_mva_trees/qcd_40_8TeV_pf","background"));
-  treeNames.push_back(pair<string,string>("full_mva_trees/qcd_40_8TeV_ff","background"));
-*/
+  //treeNames.push_back(pair<string,string>("full_mva_trees/qcd_30_8TeV_pf","background"));
+  //treeNames.push_back(pair<string,string>("full_mva_trees/qcd_30_8TeV_ff","background"));
+  //treeNames.push_back(pair<string,string>("full_mva_trees/qcd_40_8TeV_pf","background"));
+  //treeNames.push_back(pair<string,string>("full_mva_trees/qcd_40_8TeV_ff","background"));
 
   return treeNames;
 }
@@ -323,7 +332,7 @@ void run2DOptimization(TFile *outFile_,TTree *signalTree_, TTree *backgroundTree
 
  Optimizations *optimizer = new Optimizations(hsig,hbkg);
  optimizer->setMaxBins(12);
- optimizer->smoothHistograms(0.0016,0.005,1);
+ optimizer->smoothHistograms(0.002,0.005,1);
  optimizer->runOptimization();
   
  // Thats it so nw get the outputs
