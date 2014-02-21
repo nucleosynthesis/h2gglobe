@@ -31,8 +31,10 @@ void PdfWeightSmearer::readFile(std::string uId, std::string dId ){
   temp = (TH2F*) thePdfWeightFile_->Get( Form("GF_%s",dId.c_str()) );
   assert(temp!=0);    kFactorSmearers_[2]=(TH2F*) temp->Clone(("Hmass_down")); kFactorSmearers_[2]->SetDirectory(0);
 
-  // Need to normalize to central integral!
-  double C_integral = kFactorSmearers_[0]->Integral();
+  // Need to normalize to central inumber of entries!
+  double C_integral = kFactorSmearers_[0]->GetEntries();
+
+  kFactorSmearers_[0]->Scale(C_integral/kFactorSmearers_[0]->Integral());
   kFactorSmearers_[2]->Scale(C_integral/kFactorSmearers_[2]->Integral());
   kFactorSmearers_[1]->Scale(C_integral/kFactorSmearers_[1]->Integral());
 
@@ -45,8 +47,9 @@ void PdfWeightSmearer::readFile(std::string uId, std::string dId ){
   temp = (TH2F*) thePdfWeightFile_->Get( Form("VBF_%s",dId.c_str()) );
   assert(temp!=0);    kFactorSmearers_[5]=(TH2F*) temp->Clone(("Hmass_down_vbf")); kFactorSmearers_[5]->SetDirectory(0);
 
-  // Need to normalize to central integral!
-  C_integral = kFactorSmearers_[3]->Integral();
+  // Need to normalize to central number of entries integral!
+  C_integral = kFactorSmearers_[3]->GetEntries();
+  kFactorSmearers_[3]->Scale(C_integral/kFactorSmearers_[3]->Integral());
   kFactorSmearers_[5]->Scale(C_integral/kFactorSmearers_[5]->Integral());
   kFactorSmearers_[4]->Scale(C_integral/kFactorSmearers_[4]->Integral());
 }
@@ -94,6 +97,26 @@ double PdfWeightSmearer::getPdfWeight(int genMassPoint, int id, double gPT , dou
     assert(0); return 0.;
 }
 
+double pvalPoisDiff(int k, int ksum, ){
+	
+	// run the sums and get the min of two 
+	double pl = 
+	for (int i=k;i<=ksum;i++){
+
+	}
+}
+
+bool checkConsistency(double xd, double yd ){
+
+	// assume x/y
+	if (y==0) return true;
+	int x = (int) xd;
+	int y = (int) yd;
+
+	// Check p-val ok skellam, diff,1,1
+	diff = fabs(x-y);
+	
+} 
 
 double PdfWeightSmearer::getWeight( const TLorentzVector & p4, const int nPu, float syst_shift, int process_shift) const
 {
@@ -105,6 +128,8 @@ double PdfWeightSmearer::getWeight( const TLorentzVector & p4, const int nPu, fl
 
   double nominal   = getPdfWeight( 0, process_shift, gPT, gY );
   double variation = getPdfWeight( 0, varId, gPT, gY );
+
+  bool check = checkConsistency(nominel, variation);
 
   return ( max( 1. + fabs(syst_shift) * ((variation/nominal)-1), 0.) ) ;
 
