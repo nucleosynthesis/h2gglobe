@@ -97,13 +97,23 @@ double PdfWeightSmearer::getPdfWeight(int genMassPoint, int id, double gPT , dou
     assert(0); return 0.;
 }
 
-double pvalPoisDiff(int k, int ksum, ){
+/*
+double pvalPoisDiff(int k1, int ksum){
+	//  Eqn 2.1-2.2 from  http://www.ucs.louisiana.edu/~kxk4695/JSPI-04.pdf
 	
 	// run the sums and get the min of two 
-	double pl = 
-	for (int i=k;i<=ksum;i++){
+	int k2 = ksum-k1;
+	double pc = 0.5; // n,lamba same for each 
+	// since assime rate is same for this hypothesis and MC sample is the same for each 
+	double pk = TMath::Binomial(ksum,k1)*TMath::Power(pc,k1)*TMath::Power(1-pc,k2);
+	
+	double ps = 0.;
+	if (k1 > 100) return 1.;
 
-	}
+	for (int i=k1+1;i<=ksum;i++){
+	  ps+=TMath::Binomial(ksum,i)*TMath::Power(pc,i)*TMath::Power(1-pc,ksum-i);
+	} 
+	return ps+pk < 1-ps+pk ? ps+pk :1-ps+pk ;
 }
 
 bool checkConsistency(double xd, double yd ){
@@ -113,15 +123,21 @@ bool checkConsistency(double xd, double yd ){
 	int x = (int) xd;
 	int y = (int) yd;
 
-	// Check p-val ok skellam, diff,1,1
-	diff = fabs(x-y);
+	// Check p-val  
+	double pval = pvalPoisDiff(x,x+y);
+	if (pval > 0.05) return true;
+	return false; 
 	
 } 
+*/
 
 double PdfWeightSmearer::getWeight( const TLorentzVector & p4, const int nPu, float syst_shift, int process_shift) const
 {
   float gPT = p4.Pt();
   float gY  = fabs(p4.Rapidity());
+
+  if (gPT > 300) return 1.;
+  if (gY  > 5) return 1.;
 
   int    varId     = syst_shift > 0 ?   1 : 2;
   varId+=process_shift; // this is a ggH or qqH signal
@@ -129,7 +145,6 @@ double PdfWeightSmearer::getWeight( const TLorentzVector & p4, const int nPu, fl
   double nominal   = getPdfWeight( 0, process_shift, gPT, gY );
   double variation = getPdfWeight( 0, varId, gPT, gY );
 
-  bool check = checkConsistency(nominel, variation);
 
   return ( max( 1. + fabs(syst_shift) * ((variation/nominal)-1), 0.) ) ;
 
